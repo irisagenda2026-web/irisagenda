@@ -35,15 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setRoleState(userData.role);
           } else {
             // Default role for new users if not set
+            // For testing purposes, if the email is admin@irisagenda.com, make them an admin
+            const isFirstAdmin = firebaseUser.email === 'admin@irisagenda.com';
             const newUser: User = {
               id: firebaseUser.uid,
-              name: firebaseUser.displayName || 'Usuário',
+              name: isFirstAdmin ? 'Administrador Geral' : (firebaseUser.displayName || 'Usuário'),
               email: firebaseUser.email || '',
-              role: 'empresa' // Defaulting to empresa for this demo
+              role: isFirstAdmin ? 'admin' : 'empresa' // Defaulting to empresa for this demo
             };
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
             setUser(newUser);
-            setRoleState('empresa');
+            setRoleState(newUser.role);
           }
         } catch (error: any) {
           console.error("Firestore Error:", error);

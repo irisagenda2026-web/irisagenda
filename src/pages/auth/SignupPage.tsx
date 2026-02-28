@@ -6,6 +6,7 @@ import { cn } from '@/src/utils/cn';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/src/services/firebase';
 import { createEmpresa } from '@/src/services/db';
+import Logo from '@/src/components/Logo';
 
 export default function SignupPage() {
   const [searchParams] = useSearchParams();
@@ -80,7 +81,8 @@ export default function SignupPage() {
           animate={{ opacity: 1, x: 0 }}
           className="max-w-md w-full"
         >
-          <div className="mb-8">
+          <div className="mb-8 flex flex-col items-start">
+            <Logo className="mb-8" />
             <h1 className="text-3xl font-bold text-zinc-900 mb-2">Comece sua jornada</h1>
             <p className="text-zinc-500">Você selecionou o plano <span className="font-bold text-emerald-600">{planName}</span>. Preencha os dados abaixo para criar sua conta.</p>
           </div>

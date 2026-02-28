@@ -13,7 +13,19 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Empresa, Servico, Agendamento, Bloqueio, Review, User } from '../types/firebase';
+import { Empresa, Servico, Agendamento, Bloqueio, Review, User, PlatformSettings } from '../types/firebase';
+
+// Platform Settings
+export const getPlatformSettings = async () => {
+  const docRef = doc(db, 'platform', 'settings');
+  const docSnap = await getDoc(docRef);
+  return docSnap.exists() ? (docSnap.data() as PlatformSettings) : null;
+};
+
+export const updatePlatformSettings = async (data: Partial<PlatformSettings>) => {
+  const docRef = doc(db, 'platform', 'settings');
+  await setDoc(docRef, data, { merge: true });
+};
 
 // Users
 export const getAllUsers = async () => {

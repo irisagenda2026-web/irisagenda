@@ -6,6 +6,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/src/services/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useEffect } from 'react';
+import Logo from '@/src/components/Logo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -49,10 +50,8 @@ export default function LoginPage() {
         className="max-w-md w-full bg-white rounded-[40px] border border-zinc-200 shadow-2xl shadow-zinc-200/50 overflow-hidden"
       >
         <div className="p-8 md:p-12">
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white font-bold text-3xl mx-auto mb-6 shadow-lg shadow-emerald-600/20">
-              I
-            </div>
+          <div className="text-center mb-10 flex flex-col items-center">
+            <Logo className="mb-6" />
             <h1 className="text-3xl font-bold text-zinc-900 mb-2">Bem-vindo de volta</h1>
             <p className="text-zinc-500">Acesse sua conta para gerenciar sua agenda.</p>
           </div>

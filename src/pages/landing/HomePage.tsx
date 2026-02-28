@@ -14,6 +14,7 @@ import {
 import { Link } from 'react-router-dom';
 import { cn } from '@/src/utils/cn';
 import { useAuth } from '@/src/contexts/AuthContext';
+import Logo from '@/src/components/Logo';
 
 export default function HomePage() {
   const { role } = useAuth();
@@ -245,8 +246,7 @@ export default function HomePage() {
       <footer className="py-12 border-t border-zinc-100">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">I</div>
-            <span className="font-bold text-xl tracking-tight text-zinc-900">Iris Agenda</span>
+            <Logo />
           </div>
           <p className="text-zinc-500 text-sm">
             © 2026 Iris Agenda Tecnologia LTDA. Todos os direitos reservados.

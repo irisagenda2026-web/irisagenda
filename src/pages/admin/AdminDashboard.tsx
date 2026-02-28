@@ -19,11 +19,13 @@ import { cn } from '../../utils/cn';
 import { createEmpresa, addServico, createAgendamento, getAllEmpresas, getAllUsers } from '../../services/db';
 import { auth } from '../../services/firebase';
 import { Empresa, User } from '../../types/firebase';
+import Logo from '../../components/Logo';
+import AdminSettings from './AdminSettings';
 
 export default function AdminDashboard() {
   const [clinics, setClinics] = useState<Empresa[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [activeTab, setActiveTab] = useState<'clinics' | 'users'>('clinics');
+  const [activeTab, setActiveTab] = useState<'clinics' | 'users' | 'settings'>('clinics');
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalClinics: 0,
@@ -107,22 +109,35 @@ export default function AdminDashboard() {
               >
                 Usuários
               </button>
+              <button 
+                onClick={() => setActiveTab('settings')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                  activeTab === 'settings' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"
+                )}
+              >
+                Configurações da Plataforma
+              </button>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                <input 
-                  type="text" 
-                  placeholder={activeTab === 'clinics' ? "Buscar clínica..." : "Buscar usuário..."}
-                  className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
+            {activeTab !== 'settings' && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder={activeTab === 'clinics' ? "Buscar clínica..." : "Buscar usuário..."}
+                    className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="overflow-x-auto">
-            {activeTab === 'clinics' ? (
+            {activeTab === 'settings' ? (
+              <AdminSettings />
+            ) : activeTab === 'clinics' ? (
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-zinc-50/50">

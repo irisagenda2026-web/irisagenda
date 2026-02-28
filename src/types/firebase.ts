@@ -1,3 +1,9 @@
+export interface PlatformSettings {
+  platformName: string;
+  logoUrl: string;
+  faviconUrl: string;
+}
+
 export type UserRole = 'admin' | 'empresa' | 'cliente' | 'guest';
 
 export interface User {

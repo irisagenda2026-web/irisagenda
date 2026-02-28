@@ -11,6 +11,7 @@ import ClientDashboard from './pages/client/ClientDashboard';
 import PublicSite from './pages/public/PublicSite';
 import SupportChat from './components/SupportChat';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { PlatformProvider } from './contexts/PlatformContext';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from './utils/cn';
+import Logo from './components/Logo';
 
 function NavLink({ to, icon: Icon, label, active }: any) {
   return (
@@ -58,8 +60,7 @@ function AppLayout() {
       <nav className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 z-40">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">I</div>
-            <span className="font-bold text-xl tracking-tight text-zinc-900">Iris Agenda</span>
+            <Logo />
           </Link>
 
           {/* Desktop Navigation */}
@@ -156,35 +157,37 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-zinc-50 font-sans">
-          <Routes>
-            {/* Public Mini-site Route (No default Nav) */}
-            <Route path="/s/:slug" element={<PublicSite />} />
+    <PlatformProvider>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-zinc-50 font-sans">
+            <Routes>
+              {/* Public Mini-site Route (No default Nav) */}
+              <Route path="/s/:slug" element={<PublicSite />} />
 
-            {/* App Routes with Nav Layout */}
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/plans" element={<PlansPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              
-              {/* Empresa Routes */}
-              <Route path="/dashboard/calendar" element={<CalendarView />} />
-              <Route path="/dashboard/finance" element={<FinanceDashboard />} />
-              <Route path="/dashboard/site" element={<SiteEditor />} />
+              {/* App Routes with Nav Layout */}
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/plans" element={<PlansPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                
+                {/* Empresa Routes */}
+                <Route path="/dashboard/calendar" element={<CalendarView />} />
+                <Route path="/dashboard/finance" element={<FinanceDashboard />} />
+                <Route path="/dashboard/site" element={<SiteEditor />} />
 
-              {/* Admin Routes */}
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/clinics" element={<AdminDashboard />} />
-              
-              {/* Cliente Routes */}
-              <Route path="/my-appointments" element={<ClientDashboard />} />
-            </Route>
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+                {/* Admin Routes */}
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/clinics" element={<AdminDashboard />} />
+                
+                {/* Cliente Routes */}
+                <Route path="/my-appointments" element={<ClientDashboard />} />
+              </Route>
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </PlatformProvider>
   );
 }
