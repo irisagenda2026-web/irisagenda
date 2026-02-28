@@ -10,12 +10,18 @@ import {
   MessageCircle,
   History,
   Bell,
-  CreditCard
+  CreditCard,
+  User as UserIcon,
+  LogOut
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import ClientProfileModal from '../../components/ClientProfileModal';
 
 export default function ClientDashboard() {
+  const { user, logout } = useAuth();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [appointments] = useState([
     { 
       id: '1', 
@@ -42,13 +48,22 @@ export default function ClientDashboard() {
       <div className="max-w-4xl mx-auto">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Olá, João Silva!</h1>
+            <h1 className="text-2xl font-bold text-zinc-900">Olá, {user?.name || 'Cliente'}!</h1>
             <p className="text-zinc-500 text-sm">Gerencie seus agendamentos e histórico.</p>
           </div>
-          <button className="relative p-2 text-zinc-400 hover:text-zinc-900 transition-all">
-            <Bell size={24} />
-            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-zinc-50" />
-          </button>
+          <div className="flex gap-4">
+            <button className="relative p-2 text-zinc-400 hover:text-zinc-900 transition-all">
+              <Bell size={24} />
+              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-zinc-50" />
+            </button>
+            <button 
+              onClick={() => logout()}
+              className="p-2 text-zinc-400 hover:text-red-500 transition-all"
+              title="Sair"
+            >
+              <LogOut size={24} />
+            </button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -90,6 +105,11 @@ export default function ClientDashboard() {
             <div className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm">
               <h3 className="font-bold text-zinc-900 mb-4">Minha Conta</h3>
               <div className="space-y-3">
+                <SidebarLink 
+                  icon={UserIcon} 
+                  label="Meus Dados" 
+                  onClick={() => setIsProfileModalOpen(true)}
+                />
                 <SidebarLink icon={Star} label="Minhas Avaliações" count={3} />
                 <SidebarLink icon={MessageCircle} label="Mensagens" count={0} />
                 <SidebarLink icon={CreditCard} label="Métodos de Pagamento" />
@@ -106,6 +126,13 @@ export default function ClientDashboard() {
           </div>
         </div>
       </div>
+
+      <ClientProfileModal 
+        isOpen={isProfileModalOpen} 
+        onClose={() => setIsProfileModalOpen(false)} 
+        user={user}
+        onUpdate={() => window.location.reload()} // Simple reload to refresh context
+      />
     </div>
   );
 }
@@ -172,9 +199,12 @@ function AppointmentCard({ appointment }: any) {
   );
 }
 
-function SidebarLink({ icon: Icon, label, count }: any) {
+function SidebarLink({ icon: Icon, label, count, onClick }: any) {
   return (
-    <button className="w-full flex items-center justify-between p-2 hover:bg-zinc-50 rounded-xl transition-all group">
+    <button 
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-2 hover:bg-zinc-50 rounded-xl transition-all group"
+    >
       <div className="flex items-center gap-3 text-zinc-600 group-hover:text-zinc-900">
         <Icon size={18} />
         <span className="text-sm font-medium">{label}</span>

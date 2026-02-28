@@ -22,6 +22,11 @@ export const getAllUsers = async () => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 };
 
+export const updateUser = async (id: string, data: Partial<User>) => {
+  const docRef = doc(db, 'users', id);
+  await updateDoc(docRef, data);
+};
+
 // Empresas
 export const getEmpresa = async (id: string) => {
   const docRef = doc(db, 'empresas', id);
