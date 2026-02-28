@@ -13,7 +13,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Empresa, Servico, Agendamento, Bloqueio, Review, User, PlatformSettings, Profissional } from '../types/firebase';
+import { Empresa, Servico, Agendamento, Bloqueio, Review, User, PlatformSettings, Profissional, AvailabilityOverride } from '../types/firebase';
 
 // Platform Settings
 export const getPlatformSettings = async () => {
@@ -209,4 +209,46 @@ export const getBusinessHours = async (empresaId: string) => {
   const docRef = doc(db, 'businessHours', empresaId);
   const snap = await getDoc(docRef);
   return snap.exists() ? snap.data().hours : null;
+};
+
+// Availability Overrides
+export const getAvailabilityOverrides = async (empresaId: string, month: string) => {
+  // month format: YYYY-MM
+  const q = query(
+    collection(db, 'availabilityOverrides'),
+    where('empresaId', '==', empresaId),
+    where('date', '>=', `${month}-01`),
+    where('date', '<=', `${month}-31`)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AvailabilityOverride));
+};
+
+export const saveAvailabilityOverride = async (data: Omit<AvailabilityOverride, 'id' | 'updatedAt'>) => {
+  const id = `${data.empresaId}_${data.date}`;
+  const docRef = doc(db, 'availabilityOverrides', id);
+  await setDoc(docRef, {
+    ...data,
+    id,
+    updatedAt: Date.now()
+  });
+};
+
+export const bulkSaveAvailability = async (empresaId: string, dates: string[], config: Omit<AvailabilityOverride, 'id' | 'empresaId' | 'date' | 'updatedAt'>) => {
+  const { writeBatch } = await import('firebase/firestore');
+  const batch = writeBatch(db);
+  
+  dates.forEach(date => {
+    const id = `${empresaId}_${date}`;
+    const docRef = doc(db, 'availabilityOverrides', id);
+    batch.set(docRef, {
+      ...config,
+      id,
+      empresaId,
+      date,
+      updatedAt: Date.now()
+    });
+  });
+  
+  await batch.commit();
 };

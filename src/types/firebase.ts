@@ -97,3 +97,19 @@ export interface Bloqueio {
   reason: string;
   createdAt: number;
 }
+
+export interface AvailabilitySlot {
+  start: string; // HH:mm
+  end: string; // HH:mm
+  serviceIds?: string[]; // Empty means all services
+  customPrice?: number;
+}
+
+export interface AvailabilityOverride {
+  id: string;
+  empresaId: string;
+  date: string; // YYYY-MM-DD
+  isOpen: boolean;
+  slots: AvailabilitySlot[];
+  updatedAt: number;
+}
