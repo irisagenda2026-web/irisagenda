@@ -115,8 +115,8 @@ export default function SiteEditor() {
           {/* Content Area */}
           <main className="flex-1 bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-8">
-              {activeTab === 'info' && <GeneralInfoForm empresa={empresa} setEmpresa={setEmpresa} />}
-              {activeTab === 'services' && <ServicesForm empresaId={empresa?.id} />}
+              {activeTab === 'info' && <GeneralInfoForm empresa={empresa} setEmpresa={setEmpresa} onCorsError={() => setShowCorsModal(true)} />}
+              {activeTab === 'services' && <ServicesForm empresaId={empresa?.id} onCorsError={() => setShowCorsModal(true)} />}
               {activeTab === 'gallery' && <GalleryForm empresa={empresa} setEmpresa={setEmpresa} onCorsError={() => setShowCorsModal(true)} />}
             </div>
           </main>
@@ -144,7 +144,7 @@ function NavButton({ active, onClick, icon: Icon, label }: any) {
   );
 }
 
-function GeneralInfoForm({ empresa, setEmpresa }: { empresa: Empresa | null, setEmpresa: any }) {
+function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | null, setEmpresa: any, onCorsError: () => void }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -176,9 +176,13 @@ function GeneralInfoForm({ empresa, setEmpresa }: { empresa: Empresa | null, set
       const updated = { ...empresa, logoUrl: url };
       setEmpresa(updated);
       await updateEmpresa(empresa.id, { logoUrl: url });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Erro ao enviar logo.');
+      if (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
+        onCorsError();
+      } else {
+        alert('Erro ao enviar logo.');
+      }
     } finally {
       setIsUploadingLogo(false);
     }
@@ -193,9 +197,13 @@ function GeneralInfoForm({ empresa, setEmpresa }: { empresa: Empresa | null, set
       const updated = { ...empresa, coverUrl: url };
       setEmpresa(updated);
       await updateEmpresa(empresa.id, { coverUrl: url });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Erro ao enviar capa.');
+      if (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
+        onCorsError();
+      } else {
+        alert('Erro ao enviar capa.');
+      }
     } finally {
       setIsUploadingCover(false);
     }
@@ -315,7 +323,7 @@ function GeneralInfoForm({ empresa, setEmpresa }: { empresa: Empresa | null, set
   );
 }
 
-function ServicesForm({ empresaId }: { empresaId?: string }) {
+function ServicesForm({ empresaId, onCorsError }: { empresaId?: string, onCorsError: () => void }) {
   const [services, setServices] = useState<Servico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -454,6 +462,7 @@ function ServicesForm({ empresaId }: { empresaId?: string }) {
         initialData={editingService}
         categories={categories}
         empresaId={empresaId || ''}
+        onCorsError={onCorsError}
       />
     </div>
   );

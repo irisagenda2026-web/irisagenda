@@ -11,9 +11,10 @@ interface ServiceModalProps {
   initialData?: Servico | null;
   categories?: string[];
   empresaId: string;
+  onCorsError?: () => void;
 }
 
-export default function ServiceModal({ isOpen, onClose, onSave, initialData, categories = [], empresaId }: ServiceModalProps) {
+export default function ServiceModal({ isOpen, onClose, onSave, initialData, categories = [], empresaId, onCorsError }: ServiceModalProps) {
   const [formData, setFormData] = useState<Partial<Servico>>({
     name: '',
     description: '',
@@ -52,9 +53,13 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
       const fileName = `services/${Date.now()}-${file.name}`;
       const url = await uploadImage(`clinics/${empresaId}/services/${fileName}`, file);
       setFormData(prev => ({ ...prev, imageUrl: url }));
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Erro ao fazer upload da imagem.');
+      if (onCorsError && (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown')) {
+        onCorsError();
+      } else {
+        alert('Erro ao fazer upload da imagem.');
+      }
     } finally {
       setIsUploading(false);
     }

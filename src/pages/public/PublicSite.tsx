@@ -285,7 +285,7 @@ export default function PublicSite() {
                     acc[cat].push(service);
                     return acc;
                   }, {} as Record<string, Servico[]>)
-                ).map(([category, categoryServices]) => (
+                ).map(([category, categoryServices]: [string, Servico[]]) => (
                   <div key={category} className="space-y-4">
                     <h3 className="text-xl font-bold text-zinc-800 flex items-center gap-2">
                       <span className="w-1 h-6 bg-emerald-500 rounded-full block"></span>
