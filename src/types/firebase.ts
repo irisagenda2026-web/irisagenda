@@ -20,6 +20,7 @@ export interface Empresa {
   slug: string; // for the mini-site URL: irisagenda.com/s/slug
   description: string;
   logoUrl?: string;
+  faviconUrl?: string;
   coverUrl?: string;
   address: string;
   phone: string;
@@ -72,6 +73,19 @@ export interface Review {
   rating: number; // 1-5
   comment: string;
   clienteName: string;
+  createdAt: number;
+}
+
+export interface Profissional {
+  id: string;
+  empresaId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  bio?: string;
+  avatarUrl?: string;
+  specialties?: string[]; // IDs of services or just strings
+  isActive: boolean;
   createdAt: number;
 }
 

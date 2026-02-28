@@ -13,7 +13,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Empresa, Servico, Agendamento, Bloqueio, Review, User, PlatformSettings } from '../types/firebase';
+import { Empresa, Servico, Agendamento, Bloqueio, Review, User, PlatformSettings, Profissional } from '../types/firebase';
 
 // Platform Settings
 export const getPlatformSettings = async () => {
@@ -173,4 +173,28 @@ export const createBloqueio = async (data: Omit<Bloqueio, 'id' | 'createdAt'>) =
 export const deleteBloqueio = async (id: string) => {
   const { deleteDoc } = await import('firebase/firestore');
   await deleteDoc(doc(db, 'bloqueios', id));
+};
+
+// Profissionais
+export const getProfissionais = async (empresaId: string) => {
+  const q = query(collection(db, 'profissionais'), where('empresaId', '==', empresaId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Profissional));
+};
+
+export const addProfissional = async (data: Omit<Profissional, 'id' | 'createdAt'>) => {
+  return await addDoc(collection(db, 'profissionais'), {
+    ...data,
+    createdAt: Date.now(),
+  });
+};
+
+export const updateProfissional = async (id: string, data: Partial<Profissional>) => {
+  const docRef = doc(db, 'profissionais', id);
+  await updateDoc(docRef, data);
+};
+
+export const deleteProfissional = async (id: string) => {
+  const { deleteDoc } = await import('firebase/firestore');
+  await deleteDoc(doc(db, 'profissionais', id));
 };

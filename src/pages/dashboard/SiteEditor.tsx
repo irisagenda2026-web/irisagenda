@@ -147,8 +147,10 @@ function NavButton({ active, onClick, icon: Icon, label }: any) {
 function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | null, setEmpresa: any, onCorsError: () => void }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   if (!empresa) return null;
@@ -209,12 +211,33 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
     }
   };
 
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingFavicon(true);
+    try {
+      const url = await uploadImage(`clinics/${empresa.id}/favicon-${Date.now()}`, file);
+      const updated = { ...empresa, faviconUrl: url };
+      setEmpresa(updated);
+      await updateEmpresa(empresa.id, { faviconUrl: url });
+    } catch (error: any) {
+      console.error(error);
+      if (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
+        onCorsError();
+      } else {
+        alert('Erro ao enviar favicon.');
+      }
+    } finally {
+      setIsUploadingFavicon(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSave} className="space-y-8">
       {/* Visual Identity Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-900">Logo da Empresa</label>
+          <label className="text-sm font-bold text-zinc-900">Logo</label>
           <div 
             onClick={() => logoInputRef.current?.click()}
             className="aspect-square rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/10 transition-all overflow-hidden relative group bg-zinc-50"
@@ -223,36 +246,59 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
               <>
                 <img src={empresa.logoUrl} alt="Logo" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white text-xs font-bold">Alterar</span>
+                  <span className="text-white text-[10px] font-bold">Alterar</span>
                 </div>
               </>
             ) : (
-              <div className="text-zinc-400 flex flex-col items-center gap-2">
-                {isUploadingLogo ? <Loader2 className="animate-spin" /> : <ImageIcon />}
-                <span className="text-xs font-medium">Adicionar Logo</span>
+              <div className="text-zinc-400 flex flex-col items-center gap-1">
+                {isUploadingLogo ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
+                <span className="text-[10px] font-medium">Logo</span>
               </div>
             )}
             <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
           </div>
         </div>
 
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-zinc-900">Favicon</label>
+          <div 
+            onClick={() => faviconInputRef.current?.click()}
+            className="aspect-square rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/10 transition-all overflow-hidden relative group bg-zinc-50"
+          >
+            {empresa.faviconUrl ? (
+              <>
+                <img src={empresa.faviconUrl} alt="Favicon" className="w-12 h-12 object-contain" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-[10px] font-bold">Alterar</span>
+                </div>
+              </>
+            ) : (
+              <div className="text-zinc-400 flex flex-col items-center gap-1">
+                {isUploadingFavicon ? <Loader2 className="animate-spin" size={16} /> : <Layout size={16} />}
+                <span className="text-[10px] font-medium">Favicon</span>
+              </div>
+            )}
+            <input type="file" ref={faviconInputRef} className="hidden" accept="image/*" onChange={handleFaviconUpload} />
+          </div>
+        </div>
+
         <div className="md:col-span-2 space-y-2">
-          <label className="text-sm font-bold text-zinc-900">Capa do Site (Banner)</label>
+          <label className="text-sm font-bold text-zinc-900">Capa do Site</label>
           <div 
             onClick={() => coverInputRef.current?.click()}
-            className="h-full min-h-[160px] rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/10 transition-all overflow-hidden relative group bg-zinc-50"
+            className="h-full min-h-[100px] rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/10 transition-all overflow-hidden relative group bg-zinc-50"
           >
             {empresa.coverUrl ? (
               <>
                 <img src={empresa.coverUrl} alt="Cover" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white text-sm font-bold">Alterar Capa</span>
+                  <span className="text-white text-xs font-bold">Alterar Capa</span>
                 </div>
               </>
             ) : (
-              <div className="text-zinc-400 flex flex-col items-center gap-2">
-                {isUploadingCover ? <Loader2 className="animate-spin" /> : <Layout />}
-                <span className="text-sm font-medium">Adicionar Imagem de Capa</span>
+              <div className="text-zinc-400 flex flex-col items-center gap-1">
+                {isUploadingCover ? <Loader2 className="animate-spin" size={16} /> : <Layout size={16} />}
+                <span className="text-[10px] font-medium">Banner</span>
               </div>
             )}
             <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={handleCoverUpload} />

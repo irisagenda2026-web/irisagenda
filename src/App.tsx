@@ -6,6 +6,9 @@ import LoginPage from './pages/auth/LoginPage';
 import SiteEditor from './pages/dashboard/SiteEditor';
 import CalendarView from './pages/dashboard/CalendarView';
 import FinanceDashboard from './pages/dashboard/FinanceDashboard';
+import MainDashboard from './pages/dashboard/MainDashboard';
+import ClientesPage from './pages/dashboard/ClientesPage';
+import ProfissionaisPage from './pages/dashboard/ProfissionaisPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ClientDashboard from './pages/client/ClientDashboard';
 import PublicSite from './pages/public/PublicSite';
@@ -23,7 +26,10 @@ import {
   ShieldCheck,
   LogOut,
   Menu,
-  X
+  X,
+  FileText,
+  Scissors,
+  UserPlus
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from './utils/cn';
@@ -42,6 +48,21 @@ function NavLink({ to, icon: Icon, label, active }: any) {
     >
       <Icon size={18} />
       {label}
+    </Link>
+  );
+}
+
+function BottomNavLink({ to, icon: Icon, label, active }: any) {
+  return (
+    <Link 
+      to={to} 
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all",
+        active ? "text-emerald-600" : "text-zinc-400"
+      )}
+    >
+      <Icon size={20} className={active ? "text-emerald-600" : "text-zinc-400"} />
+      <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
     </Link>
   );
 }
@@ -81,9 +102,12 @@ function AppLayout() {
 
             {isEmpresa && (
               <>
+                <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" active={location.pathname === '/dashboard'} />
                 <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Agenda" active={location.pathname === '/dashboard/calendar'} />
+                <NavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" active={location.pathname === '/dashboard/profissionais'} />
+                <NavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
-                <NavLink to="/dashboard/site" icon={LayoutDashboard} label="Meu Site" active={location.pathname === '/dashboard/site'} />
+                <NavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
               </>
             )}
 
@@ -147,9 +171,20 @@ function AppLayout() {
         )}
       </nav>
 
-      <main className="pt-16">
+      <main className={cn("pt-16", isEmpresa && "pb-16 md:pb-0")}>
         <Outlet />
       </main>
+
+      {/* Mobile Bottom Navigation (Empresa Only) */}
+      {isEmpresa && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-50 flex justify-around items-center pb-safe h-16">
+          <BottomNavLink to="/dashboard" icon={LayoutDashboard} label="Início" active={location.pathname === '/dashboard'} />
+          <BottomNavLink to="/dashboard/calendar" icon={CalendarIcon} label="Agenda" active={location.pathname === '/dashboard/calendar'} />
+          <BottomNavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" active={location.pathname === '/dashboard/profissionais'} />
+          <BottomNavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
+          <BottomNavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
+        </div>
+      )}
       <SupportChat />
     </>
   );
@@ -173,8 +208,11 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 
                 {/* Empresa Routes */}
+                <Route path="/dashboard" element={<MainDashboard />} />
                 <Route path="/dashboard/calendar" element={<CalendarView />} />
                 <Route path="/dashboard/finance" element={<FinanceDashboard />} />
+                <Route path="/dashboard/clientes" element={<ClientesPage />} />
+                <Route path="/dashboard/profissionais" element={<ProfissionaisPage />} />
                 <Route path="/dashboard/site" element={<SiteEditor />} />
 
                 {/* Admin Routes */}

@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar as CalendarIcon, Plus, Clock, User, ChevronLeft, ChevronRight, 
-  Loader2, Ban, Trash2, DollarSign, Scissors, X, Check, AlertCircle
+  Loader2, Ban, Trash2, DollarSign, Scissors, X, Check, AlertCircle,
+  Users, Filter, Search
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
 import { 
   getAgendamentos, createAgendamento, getServicos, addServico, 
-  getBloqueios, createBloqueio, deleteBloqueio 
+  getBloqueios, createBloqueio, deleteBloqueio, getProfissionais 
 } from '@/src/services/db';
-import { Agendamento, Servico, Bloqueio } from '@/src/types/firebase';
+import { Agendamento, Servico, Bloqueio, Profissional } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function CalendarView() {
@@ -18,8 +19,16 @@ export default function CalendarView() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [bloqueios, setBloqueios] = useState<Bloqueio[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterService, setFilterService] = useState('all');
+  const [filterProfissional, setFilterProfissional] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Modals state
   const [isApptModalOpen, setIsApptModalOpen] = useState(false);
@@ -35,14 +44,16 @@ export default function CalendarView() {
       const end = new Date(selectedDate);
       end.setHours(23, 59, 59, 999);
 
-      const [agData, blData, svData] = await Promise.all([
+      const [agData, blData, svData, profData] = await Promise.all([
         getAgendamentos(user.uid, start.getTime(), end.getTime()),
         getBloqueios(user.uid, start.getTime(), end.getTime()),
-        getServicos(user.uid)
+        getServicos(user.uid),
+        getProfissionais(user.uid)
       ]);
       setAgendamentos(agData);
       setBloqueios(blData);
       setServicos(svData);
+      setProfissionais(profData);
     }
     setIsLoading(false);
   };
@@ -82,8 +93,16 @@ export default function CalendarView() {
   const occupancyRate = Math.round(((bookedMinutes + blockedMinutes) / (totalHours * 60)) * 100);
   const expectedRevenue = agendamentos.reduce((acc, curr) => acc + curr.totalPrice, 0);
 
+  const filteredAgendamentos = agendamentos.filter(ag => {
+    const matchStatus = filterStatus === 'all' || ag.status === filterStatus;
+    const matchService = filterService === 'all' || ag.servicoId === filterService;
+    const matchProfissional = filterProfissional === 'all' || ag.profissionalId === filterProfissional;
+    const matchSearch = ag.clienteName.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchStatus && matchService && matchProfissional && matchSearch;
+  });
+
   return (
-    <div className="p-4 md:p-8 bg-zinc-50 min-h-screen">
+    <div className="p-4 md:p-8 bg-zinc-50 min-h-screen pb-24 md:pb-8">
       <div className="max-w-7xl mx-auto">
         
         {/* Header */}
@@ -94,24 +113,22 @@ export default function CalendarView() {
           </div>
           
           {role === 'empresa' && (
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <button 
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl font-bold hover:bg-amber-200 transition-all shadow-sm border border-amber-200"
+              >
+                Abrir meu Caixa
+              </button>
               <button 
                 onClick={() => setIsServiceModalOpen(true)}
-                className="flex items-center gap-2 bg-white border border-zinc-200 text-zinc-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-zinc-50 transition-all shadow-sm"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-zinc-200 text-zinc-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-zinc-50 transition-all shadow-sm"
               >
                 <Scissors size={18} />
                 Serviços
               </button>
               <button 
-                onClick={() => setIsBlockModalOpen(true)}
-                className="flex items-center gap-2 bg-white border border-zinc-200 text-zinc-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-zinc-50 transition-all shadow-sm"
-              >
-                <Ban size={18} />
-                Bloquear
-              </button>
-              <button 
                 onClick={() => setIsApptModalOpen(true)}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+                className="w-full md:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
               >
                 <Plus size={18} />
                 Novo Agendamento
@@ -119,6 +136,74 @@ export default function CalendarView() {
             </div>
           )}
         </header>
+
+        {/* View Controls & Filters */}
+        <div className="space-y-4 mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex bg-white p-1 rounded-xl border border-zinc-200 shadow-sm w-full md:w-auto">
+              <button 
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  "flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all",
+                  viewMode === 'list' ? "bg-zinc-900 text-white shadow-md" : "text-zinc-500 hover:bg-zinc-50"
+                )}
+              >
+                <Users size={16} />
+                Lista
+              </button>
+              <button 
+                onClick={() => setViewMode('timeline')}
+                className={cn(
+                  "flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all",
+                  viewMode === 'timeline' ? "bg-zinc-900 text-white shadow-md" : "text-zinc-500 hover:bg-zinc-50"
+                )}
+              >
+                <CalendarIcon size={16} />
+                Calendário
+              </button>
+            </div>
+
+            <div className="relative w-full md:w-64">
+              <input 
+                type="text"
+                placeholder="Buscar cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-zinc-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+              <User className="absolute left-3 top-2.5 text-zinc-400" size={16} />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select 
+              value={filterService}
+              onChange={(e) => setFilterService(e.target.value)}
+              className="flex-1 md:flex-none bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs font-bold text-zinc-600 outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="all">Serviço: Todos</option>
+              {servicos.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select 
+              value={filterProfissional}
+              onChange={(e) => setFilterProfissional(e.target.value)}
+              className="flex-1 md:flex-none bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs font-bold text-zinc-600 outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="all">Profissional: Todos</option>
+              {profissionais.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select 
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="flex-1 md:flex-none bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs font-bold text-zinc-600 outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="all">Status: Todos</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="pending">Pendente</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
@@ -216,109 +301,197 @@ export default function CalendarView() {
 
           </div>
 
-          {/* Right Timeline View */}
-          <div className="lg:col-span-3 bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col h-[800px]">
-            <div className="p-4 border-b border-zinc-100 bg-zinc-50/80 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md">
-              <h3 className="font-bold text-zinc-900 flex items-center gap-2">
-                <Clock size={18} className="text-emerald-600" />
-                Linha do Tempo
-              </h3>
-              <div className="flex gap-3 text-xs font-medium">
-                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Confirmado</div>
-                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-300" /> Bloqueado</div>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto relative bg-zinc-50/30">
-              {/* Timeline Grid Background */}
-              <div className="absolute inset-0 z-0">
-                {Array.from({ length: 13 }).map((_, i) => (
-                  <div key={i} className="h-[80px] border-b border-zinc-100 flex w-full">
-                    <div className="w-20 flex-shrink-0 border-r border-zinc-100 bg-white flex justify-center pt-2">
-                      <span className="text-xs font-bold text-zinc-400">{i + 8}:00</span>
-                    </div>
-                    <div className="flex-1" />
+          {/* Right Content Area */}
+          <div className="lg:col-span-3">
+            {viewMode === 'timeline' ? (
+              <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col h-[800px]">
+                <div className="p-4 border-b border-zinc-100 bg-zinc-50/80 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md">
+                  <h3 className="font-bold text-zinc-900 flex items-center gap-2">
+                    <Clock size={18} className="text-emerald-600" />
+                    Linha do Tempo
+                  </h3>
+                  <div className="flex gap-3 text-xs font-medium">
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Confirmado</div>
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-300" /> Bloqueado</div>
                   </div>
-                ))}
-              </div>
-
-              {/* Events Container */}
-              <div className="absolute inset-0 z-10 pl-20 pt-0">
-                <div className="relative w-full h-full pr-4">
-                  
-                  {/* Render Bloqueios */}
-                  {bloqueios.map(bl => {
-                    const startHour = new Date(bl.startTime).getHours() + (new Date(bl.startTime).getMinutes() / 60);
-                    const endHour = new Date(bl.endTime).getHours() + (new Date(bl.endTime).getMinutes() / 60);
-                    const top = (startHour - 8) * 80;
-                    const height = (endHour - startHour) * 80;
-                    
-                    // Only render if within 8:00 to 20:00
-                    if (startHour < 8 || startHour >= 21) return null;
-
-                    return (
-                      <div 
-                        key={bl.id}
-                        className="absolute left-2 right-2 bg-zinc-100/80 backdrop-blur-sm border border-zinc-200 rounded-xl p-3 shadow-sm flex flex-col justify-center overflow-hidden group"
-                        style={{ top: `${top}px`, height: `${height}px` }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-zinc-500">
-                            <Ban size={14} />
-                            <span className="text-sm font-bold">{bl.reason}</span>
-                          </div>
-                          {role === 'empresa' && (
-                            <button 
-                              onClick={() => handleDeleteBloqueio(bl.id)}
-                              className="p-1.5 bg-white rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shadow-sm"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
+                </div>
+                
+                <div className="flex-1 overflow-y-auto relative bg-zinc-50/30">
+                  {/* Timeline Grid Background */}
+                  <div className="absolute inset-0 z-0">
+                    {Array.from({ length: 13 }).map((_, i) => (
+                      <div key={i} className="h-[80px] border-b border-zinc-100 flex w-full">
+                        <div className="w-20 flex-shrink-0 border-r border-zinc-100 bg-white flex justify-center pt-2">
+                          <span className="text-xs font-bold text-zinc-400">{i + 8}:00</span>
                         </div>
+                        <div className="flex-1" />
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
 
-                  {/* Render Agendamentos */}
-                  {agendamentos.map(ag => {
-                    const startHour = new Date(ag.startTime).getHours() + (new Date(ag.startTime).getMinutes() / 60);
-                    const endHour = new Date(ag.endTime).getHours() + (new Date(ag.endTime).getMinutes() / 60);
-                    const top = (startHour - 8) * 80;
-                    const height = (endHour - startHour) * 80;
+                  {/* Events Container */}
+                  <div className="absolute inset-0 z-10 pl-20 pt-0">
+                    <div className="relative w-full h-full pr-4">
+                      
+                      {/* Render Bloqueios */}
+                      {bloqueios.map(bl => {
+                        const startHour = new Date(bl.startTime).getHours() + (new Date(bl.startTime).getMinutes() / 60);
+                        const endHour = new Date(bl.endTime).getHours() + (new Date(bl.endTime).getMinutes() / 60);
+                        const top = (startHour - 8) * 80;
+                        const height = (endHour - startHour) * 80;
+                        
+                        // Only render if within 8:00 to 20:00
+                        if (startHour < 8 || startHour >= 21) return null;
 
-                    if (startHour < 8 || startHour >= 21) return null;
+                        return (
+                          <div 
+                            key={bl.id}
+                            className="absolute left-2 right-2 bg-zinc-100/80 backdrop-blur-sm border border-zinc-200 rounded-xl p-3 shadow-sm flex flex-col justify-center overflow-hidden group"
+                            style={{ top: `${top}px`, height: `${height}px` }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-zinc-500">
+                                <Ban size={14} />
+                                <span className="text-sm font-bold">{bl.reason}</span>
+                              </div>
+                              {role === 'empresa' && (
+                                <button 
+                                  onClick={() => handleDeleteBloqueio(bl.id)}
+                                  className="p-1.5 bg-white rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shadow-sm"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
 
-                    return (
+                      {/* Render Agendamentos */}
+                      {filteredAgendamentos.map(ag => {
+                        const startHour = new Date(ag.startTime).getHours() + (new Date(ag.startTime).getMinutes() / 60);
+                        const endHour = new Date(ag.endTime).getHours() + (new Date(ag.endTime).getMinutes() / 60);
+                        const top = (startHour - 8) * 80;
+                        const height = (endHour - startHour) * 80;
+
+                        if (startHour < 8 || startHour >= 21) return null;
+
+                        return (
+                          <motion.div 
+                            key={ag.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="absolute left-2 right-2 bg-emerald-50 border-l-4 border-emerald-500 border-y border-r border-y-emerald-100 border-r-emerald-100 rounded-r-xl p-3 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                            style={{ top: `${top}px`, height: `${height}px` }}
+                          >
+                            <div className="flex justify-between items-start h-full">
+                              <div className="flex flex-col h-full justify-between">
+                                <div>
+                                  <div className="font-bold text-emerald-900 text-sm leading-tight">{ag.clienteName}</div>
+                                  <div className="text-xs text-emerald-700 font-medium mt-0.5">{ag.servicoName}</div>
+                                </div>
+                                <div className="text-[10px] text-emerald-600 flex items-center gap-1 font-bold bg-emerald-100/50 w-fit px-2 py-1 rounded-md">
+                                  <Clock size={10} />
+                                  {new Date(ag.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - {new Date(ag.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                              <div className="text-xs font-bold text-emerald-700 bg-white px-2 py-1 rounded-lg shadow-sm border border-emerald-100">
+                                R$ {ag.totalPrice}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredAgendamentos.length === 0 ? (
+                  <div className="bg-white p-12 rounded-3xl border border-zinc-200 text-center">
+                    <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CalendarIcon size={32} className="text-zinc-300" />
+                    </div>
+                    <h3 className="text-lg font-bold text-zinc-900">Nenhum agendamento encontrado</h3>
+                    <p className="text-zinc-500">Tente mudar os filtros ou selecione outra data.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {filteredAgendamentos.map(ag => (
                       <motion.div 
                         key={ag.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="absolute left-2 right-2 bg-emerald-50 border-l-4 border-emerald-500 border-y border-r border-y-emerald-100 border-r-emerald-100 rounded-r-xl p-3 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                        style={{ top: `${top}px`, height: `${height}px` }}
+                        layout
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white p-5 rounded-3xl border border-zinc-200 shadow-sm hover:shadow-md transition-all group"
                       >
-                        <div className="flex justify-between items-start h-full">
-                          <div className="flex flex-col h-full justify-between">
-                            <div>
-                              <div className="font-bold text-emerald-900 text-sm leading-tight">{ag.clienteName}</div>
-                              <div className="text-xs text-emerald-700 font-medium mt-0.5">{ag.servicoName}</div>
+                        <div className="flex flex-col md:flex-row justify-between gap-4">
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Data e Hora */}
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Data e hora</p>
+                              <p className="text-sm font-bold text-zinc-900">
+                                {new Date(ag.startTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(ag.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              <p className="text-xs text-zinc-500 capitalize">
+                                {new Date(ag.startTime).toLocaleDateString('pt-BR', { weekday: 'long' })}
+                              </p>
                             </div>
-                            <div className="text-[10px] text-emerald-600 flex items-center gap-1 font-bold bg-emerald-100/50 w-fit px-2 py-1 rounded-md">
-                              <Clock size={10} />
-                              {new Date(ag.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - {new Date(ag.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+
+                            {/* Serviço */}
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Serviço</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold text-zinc-900">{ag.servicoName}</p>
+                                <span className="text-[10px] bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                                  <Clock size={10} /> 60 min
+                                </span>
+                              </div>
+                              <p className="text-xs text-zinc-500">
+                                <span className="font-medium">Profissional:</span> Lavínia Corrêa • Sepetiba
+                              </p>
+                            </div>
+
+                            {/* Cliente */}
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Cliente</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold text-zinc-900">{ag.clienteName}</p>
+                                <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-md font-bold">Portal</span>
+                              </div>
+                              <p className="text-xs text-zinc-500">
+                                <span className="font-medium">Profissional:</span> Lavínia Corrêa • Sepetiba
+                              </p>
                             </div>
                           </div>
-                          <div className="text-xs font-bold text-emerald-700 bg-white px-2 py-1 rounded-lg shadow-sm border border-emerald-100">
-                            R$ {ag.totalPrice}
+
+                          <div className="flex flex-row md:flex-col justify-between items-end gap-2">
+                            <div className="flex flex-col items-end gap-1">
+                              <div className={cn(
+                                "px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2",
+                                ag.status === 'confirmed' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-zinc-50 text-zinc-600 border border-zinc-100"
+                              )}>
+                                <Check size={14} />
+                                {ag.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+                              </div>
+                              <div className="flex items-center gap-1 text-red-500 font-bold text-[10px] mt-1">
+                                <DollarSign size={10} />
+                                A pagar: R$ {ag.totalPrice.toFixed(2)}
+                              </div>
+                            </div>
+                            <button className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-400 transition-colors">
+                              <X size={18} />
+                            </button>
                           </div>
                         </div>
                       </motion.div>
-                    );
-                  })}
-
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -330,6 +503,7 @@ export default function CalendarView() {
             onClose={() => setIsApptModalOpen(false)} 
             selectedDate={selectedDate}
             servicos={servicos}
+            profissionais={profissionais}
             onSuccess={loadData}
           />
         )}
@@ -354,11 +528,12 @@ export default function CalendarView() {
 
 // --- Modals Components ---
 
-function NewApptModal({ onClose, selectedDate, servicos, onSuccess }: any) {
+function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     clienteName: '',
     servicoId: servicos.length > 0 ? servicos[0].id : '',
+    profissionalId: profissionais.length > 0 ? profissionais[0].id : 'default',
     hour: '09:00'
   });
 
@@ -384,7 +559,7 @@ function NewApptModal({ onClose, selectedDate, servicos, onSuccess }: any) {
         clientePhone: '',
         servicoId: servico.id,
         servicoName: servico.name,
-        profissionalId: 'default',
+        profissionalId: formData.profissionalId,
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'confirmed',
@@ -450,6 +625,24 @@ function NewApptModal({ onClose, selectedDate, servicos, onSuccess }: any) {
                   {servicos.map((s: any) => (
                     <option key={s.id} value={s.id}>{s.name} - R$ {s.price} ({s.durationMinutes} min)</option>
                   ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-zinc-700">Profissional</label>
+                <select 
+                  required
+                  value={formData.profissionalId}
+                  onChange={e => setFormData({...formData, profissionalId: e.target.value})}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                >
+                  {profissionais.length === 0 ? (
+                    <option value="default">Lavínia Corrêa (Padrão)</option>
+                  ) : (
+                    profissionais.map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))
+                  )}
                 </select>
               </div>
 
