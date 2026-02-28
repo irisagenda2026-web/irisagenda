@@ -9,7 +9,7 @@ import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
 import { 
   getAgendamentos, createAgendamento, getServicos, addServico, 
-  getBloqueios, createBloqueio, deleteBloqueio, getProfissionais 
+  getBloqueios, createBloqueio, deleteBloqueio, getProfissionais, getBusinessHours 
 } from '@/src/services/db';
 import { Agendamento, Servico, Bloqueio, Profissional } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -20,6 +20,7 @@ export default function CalendarView() {
   const [bloqueios, setBloqueios] = useState<Bloqueio[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [businessHours, setBusinessHours] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
@@ -44,16 +45,18 @@ export default function CalendarView() {
       const end = new Date(selectedDate);
       end.setHours(23, 59, 59, 999);
 
-      const [agData, blData, svData, profData] = await Promise.all([
+      const [agData, blData, svData, profData, bhData] = await Promise.all([
         getAgendamentos(user.uid, start.getTime(), end.getTime()),
         getBloqueios(user.uid, start.getTime(), end.getTime()),
         getServicos(user.uid),
-        getProfissionais(user.uid)
+        getProfissionais(user.uid),
+        getBusinessHours(user.uid)
       ]);
       setAgendamentos(agData);
       setBloqueios(blData);
       setServicos(svData);
       setProfissionais(profData);
+      setBusinessHours(bhData);
     }
     setIsLoading(false);
   };
@@ -86,11 +89,24 @@ export default function CalendarView() {
   }
 
   // Math for availability
-  const totalHours = 12; // 8:00 to 20:00
+  const getDayMinutes = () => {
+    if (!businessHours) return 12 * 60; // Default 12h
+    const dayOfWeek = selectedDate.getDay().toString();
+    const dayConfig = businessHours[dayOfWeek];
+    if (!dayConfig || !dayConfig.isOpen) return 0;
+    
+    return dayConfig.slots.reduce((acc: number, slot: any) => {
+      const [sh, sm] = slot.start.split(':').map(Number);
+      const [eh, em] = slot.end.split(':').map(Number);
+      return acc + ((eh * 60 + em) - (sh * 60 + sm));
+    }, 0);
+  };
+
+  const totalDayMinutes = getDayMinutes();
   const bookedMinutes = agendamentos.reduce((acc, curr) => acc + ((curr.endTime - curr.startTime) / 60000), 0);
   const blockedMinutes = bloqueios.reduce((acc, curr) => acc + ((curr.endTime - curr.startTime) / 60000), 0);
-  const totalAvailableMinutes = (totalHours * 60) - bookedMinutes - blockedMinutes;
-  const occupancyRate = Math.round(((bookedMinutes + blockedMinutes) / (totalHours * 60)) * 100);
+  const totalAvailableMinutes = Math.max(0, totalDayMinutes - bookedMinutes - blockedMinutes);
+  const occupancyRate = totalDayMinutes > 0 ? Math.round(((bookedMinutes + blockedMinutes) / totalDayMinutes) * 100) : 0;
   const expectedRevenue = agendamentos.reduce((acc, curr) => acc + curr.totalPrice, 0);
 
   const filteredAgendamentos = agendamentos.filter(ag => {

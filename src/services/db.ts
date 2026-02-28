@@ -198,3 +198,15 @@ export const deleteProfissional = async (id: string) => {
   const { deleteDoc } = await import('firebase/firestore');
   await deleteDoc(doc(db, 'profissionais', id));
 };
+
+// Horários de Expediente
+export const saveBusinessHours = async (empresaId: string, hours: any) => {
+  const docRef = doc(db, 'businessHours', empresaId);
+  await setDoc(docRef, { hours, updatedAt: Date.now() });
+};
+
+export const getBusinessHours = async (empresaId: string) => {
+  const docRef = doc(db, 'businessHours', empresaId);
+  const snap = await getDoc(docRef);
+  return snap.exists() ? snap.data().hours : null;
+};

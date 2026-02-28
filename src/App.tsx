@@ -9,6 +9,7 @@ import FinanceDashboard from './pages/dashboard/FinanceDashboard';
 import MainDashboard from './pages/dashboard/MainDashboard';
 import ClientesPage from './pages/dashboard/ClientesPage';
 import ProfissionaisPage from './pages/dashboard/ProfissionaisPage';
+import BusinessHoursPage from './pages/dashboard/BusinessHoursPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ClientDashboard from './pages/client/ClientDashboard';
 import PublicSite from './pages/public/PublicSite';
@@ -29,7 +30,8 @@ import {
   X,
   FileText,
   Scissors,
-  UserPlus
+  UserPlus,
+  Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from './utils/cn';
@@ -105,6 +107,7 @@ function AppLayout() {
                 <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" active={location.pathname === '/dashboard'} />
                 <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Agenda" active={location.pathname === '/dashboard/calendar'} />
                 <NavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" active={location.pathname === '/dashboard/profissionais'} />
+                <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Horários" active={location.pathname === '/dashboard/disponibilidade'} />
                 <NavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
                 <NavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
@@ -213,6 +216,7 @@ export default function App() {
                 <Route path="/dashboard/finance" element={<FinanceDashboard />} />
                 <Route path="/dashboard/clientes" element={<ClientesPage />} />
                 <Route path="/dashboard/profissionais" element={<ProfissionaisPage />} />
+                <Route path="/dashboard/disponibilidade" element={<BusinessHoursPage />} />
                 <Route path="/dashboard/site" element={<SiteEditor />} />
 
                 {/* Admin Routes */}
