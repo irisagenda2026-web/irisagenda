@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Loader2, DollarSign, Clock, Tag, AlignLeft, Image as ImageIcon } from 'lucide-react';
+import { X, Save, Loader2, DollarSign, Clock, Tag, AlignLeft, Image as ImageIcon, Upload } from 'lucide-react';
 import { Servico } from '@/src/types/firebase';
+import { uploadImage } from '@/src/services/storage';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -9,18 +10,22 @@ interface ServiceModalProps {
   onSave: (data: Partial<Servico>) => Promise<void>;
   initialData?: Servico | null;
   categories?: string[];
+  empresaId: string;
 }
 
-export default function ServiceModal({ isOpen, onClose, onSave, initialData, categories = [] }: ServiceModalProps) {
+export default function ServiceModal({ isOpen, onClose, onSave, initialData, categories = [], empresaId }: ServiceModalProps) {
   const [formData, setFormData] = useState<Partial<Servico>>({
     name: '',
     description: '',
     price: 0,
     durationMinutes: 30,
     category: '',
-    isActive: true
+    isActive: true,
+    imageUrl: ''
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -32,10 +37,28 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
         price: 0,
         durationMinutes: 30,
         category: '',
-        isActive: true
+        isActive: true,
+        imageUrl: ''
       });
     }
   }, [initialData, isOpen]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const fileName = `services/${Date.now()}-${file.name}`;
+      const url = await uploadImage(`clinics/${empresaId}/services/${fileName}`, file);
+      setFormData(prev => ({ ...prev, imageUrl: url }));
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao fazer upload da imagem.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +94,43 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
             </div>
             
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Image Upload */}
+              <div className="flex justify-center">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative w-full h-48 bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/10 transition-all overflow-hidden group"
+                >
+                  {formData.imageUrl ? (
+                    <>
+                      <img src={formData.imageUrl} alt="Service" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-white font-medium flex items-center gap-2">
+                          <ImageIcon size={20} /> Alterar Imagem
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-zinc-400 flex flex-col items-center gap-2">
+                      {isUploading ? (
+                        <Loader2 className="animate-spin" size={32} />
+                      ) : (
+                        <Upload size={32} />
+                      )}
+                      <span className="text-sm font-medium">
+                        {isUploading ? 'Enviando...' : 'Adicionar Imagem de Capa'}
+                      </span>
+                    </div>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-zinc-700">Nome do Serviço</label>
                 <input 
@@ -157,7 +217,7 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
               </button>
               <button 
                 onClick={handleSubmit}
-                disabled={isSaving}
+                disabled={isSaving || isUploading}
                 className="px-8 py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all flex items-center gap-2 disabled:opacity-70"
               >
                 {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}

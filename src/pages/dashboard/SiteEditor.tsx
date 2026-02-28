@@ -145,11 +145,114 @@ function NavButton({ active, onClick, icon: Icon, label }: any) {
 }
 
 function GeneralInfoForm({ empresa, setEmpresa }: { empresa: Empresa | null, setEmpresa: any }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
   if (!empresa) return null;
 
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await updateEmpresa(empresa.id, empresa);
+      alert('Informações salvas com sucesso!');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao salvar informações.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingLogo(true);
+    try {
+      const url = await uploadImage(`clinics/${empresa.id}/logo-${Date.now()}`, file);
+      const updated = { ...empresa, logoUrl: url };
+      setEmpresa(updated);
+      await updateEmpresa(empresa.id, { logoUrl: url });
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao enviar logo.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingCover(true);
+    try {
+      const url = await uploadImage(`clinics/${empresa.id}/cover-${Date.now()}`, file);
+      const updated = { ...empresa, coverUrl: url };
+      setEmpresa(updated);
+      await updateEmpresa(empresa.id, { coverUrl: url });
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao enviar capa.');
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-6">
+    <form onSubmit={handleSave} className="space-y-8">
+      {/* Visual Identity Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-zinc-900">Logo da Empresa</label>
+          <div 
+            onClick={() => logoInputRef.current?.click()}
+            className="aspect-square rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/10 transition-all overflow-hidden relative group bg-zinc-50"
+          >
+            {empresa.logoUrl ? (
+              <>
+                <img src={empresa.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-xs font-bold">Alterar</span>
+                </div>
+              </>
+            ) : (
+              <div className="text-zinc-400 flex flex-col items-center gap-2">
+                {isUploadingLogo ? <Loader2 className="animate-spin" /> : <ImageIcon />}
+                <span className="text-xs font-medium">Adicionar Logo</span>
+              </div>
+            )}
+            <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+          </div>
+        </div>
+
+        <div className="md:col-span-2 space-y-2">
+          <label className="text-sm font-bold text-zinc-900">Capa do Site (Banner)</label>
+          <div 
+            onClick={() => coverInputRef.current?.click()}
+            className="h-full min-h-[160px] rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/10 transition-all overflow-hidden relative group bg-zinc-50"
+          >
+            {empresa.coverUrl ? (
+              <>
+                <img src={empresa.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-sm font-bold">Alterar Capa</span>
+                </div>
+              </>
+            ) : (
+              <div className="text-zinc-400 flex flex-col items-center gap-2">
+                {isUploadingCover ? <Loader2 className="animate-spin" /> : <Layout />}
+                <span className="text-sm font-medium">Adicionar Imagem de Capa</span>
+              </div>
+            )}
+            <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={handleCoverUpload} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-zinc-700">Nome da Clínica</label>
           <input 
@@ -208,7 +311,7 @@ function GeneralInfoForm({ empresa, setEmpresa }: { empresa: Empresa | null, set
           />
         </div>
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -244,7 +347,8 @@ function ServicesForm({ empresaId }: { empresaId?: string }) {
         durationMinutes: data.durationMinutes!,
         description: data.description || '',
         category: data.category || 'Geral',
-        isActive: true
+        isActive: true,
+        imageUrl: data.imageUrl || ''
       });
     }
     await loadServices();
@@ -349,6 +453,7 @@ function ServicesForm({ empresaId }: { empresaId?: string }) {
         onSave={handleSaveService}
         initialData={editingService}
         categories={categories}
+        empresaId={empresaId || ''}
       />
     </div>
   );

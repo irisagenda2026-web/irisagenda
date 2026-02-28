@@ -11,7 +11,8 @@ import {
   Loader2,
   Star,
   MessageCircle,
-  User
+  User,
+  ImageIcon
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { getEmpresaBySlug, getServicos, createAgendamento, getAgendamentos, getBloqueios, getReviews, addReview } from '@/src/services/db';
@@ -190,51 +191,91 @@ export default function PublicSite() {
       )}
 
       {/* Header / Cover */}
-      <div className="relative h-48 md:h-64 bg-zinc-900 overflow-hidden">
+      <div className="relative h-[40vh] md:h-[50vh] bg-zinc-900 overflow-hidden">
         {empresa.coverUrl ? (
-          <img src={empresa.coverUrl} alt="Cover" className="w-full h-full object-cover opacity-60" referrerPolicy="no-referrer" />
+          <motion.img 
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1.5 }}
+            src={empresa.coverUrl} 
+            alt="Cover" 
+            className="w-full h-full object-cover opacity-70" 
+            referrerPolicy="no-referrer" 
+          />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-800 opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 to-black opacity-90" />
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        
         <div className="absolute inset-0 flex items-end">
-          <div className="max-w-4xl mx-auto w-full px-4 pb-6 flex items-center gap-4">
-            <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-2xl shadow-xl p-1 shrink-0 overflow-hidden">
+          <div className="max-w-4xl mx-auto w-full px-6 pb-12 flex flex-col md:flex-row items-center md:items-end gap-6 text-center md:text-left">
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-full shadow-2xl p-1 shrink-0 overflow-hidden border-4 border-white"
+            >
               {empresa.logoUrl ? (
-                <img src={empresa.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-xl" referrerPolicy="no-referrer" />
+                <img src={empresa.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
               ) : (
-                <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400 font-bold text-2xl">
+                <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400 font-bold text-4xl rounded-full">
                   {empresa.name[0]}
                 </div>
               )}
-            </div>
-            <div className="text-white">
-              <h1 className="text-2xl md:text-3xl font-bold">{empresa.name}</h1>
-              <div className="flex items-center gap-2 text-white/80 text-sm mt-1">
-                <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                <span>4.9 (120 avaliações)</span>
-              </div>
+            </motion.div>
+            <div className="text-white pb-2">
+              <motion.h1 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-3xl md:text-5xl font-bold mb-2"
+              >
+                {empresa.name}
+              </motion.h1>
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-white/90 text-sm md:text-base"
+              >
+                <div className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
+                  <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold">4.9</span>
+                  <span className="opacity-70">(120 avaliações)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MapPin size={16} className="text-emerald-400" />
+                  <span>{empresa.address || 'Localização não informada'}</span>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto px-4 -mt-8 relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
         {/* Main Content */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-8">
           <AnimatePresence mode="wait">
             {step === 'service' && (
               <motion.div
                 key="step-service"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-10"
               >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-zinc-900">Escolha um serviço</h2>
-                  <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-3 py-1 rounded-full">
-                    {servicos.length} opções
-                  </span>
+                {/* Categories Navigation (Simulated Carousel) */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-100 overflow-x-auto no-scrollbar">
+                  <div className="flex gap-2 min-w-max">
+                    <button className="px-6 py-2 bg-zinc-900 text-white rounded-full text-sm font-bold shadow-lg shadow-zinc-900/20">
+                      Todos
+                    </button>
+                    {Array.from(new Set(servicos.map(s => s.category || 'Geral'))).map(cat => (
+                      <button key={cat} className="px-6 py-2 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 rounded-full text-sm font-bold transition-colors">
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {Object.entries(
@@ -244,35 +285,46 @@ export default function PublicSite() {
                     acc[cat].push(service);
                     return acc;
                   }, {} as Record<string, Servico[]>)
-                ).map(([category, categoryServices]: [string, Servico[]]) => (
-                  <div key={category} className="space-y-3">
-                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">{category}</h3>
-                    <div className="grid gap-3">
+                ).map(([category, categoryServices]) => (
+                  <div key={category} className="space-y-4">
+                    <h3 className="text-xl font-bold text-zinc-800 flex items-center gap-2">
+                      <span className="w-1 h-6 bg-emerald-500 rounded-full block"></span>
+                      {category}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {categoryServices.map(service => (
-                        <button
+                        <motion.button
+                          whileHover={{ y: -4 }}
                           key={service.id}
                           onClick={() => {
                             setSelectedService(service);
                             setStep('datetime');
                           }}
-                          className="flex items-center justify-between p-5 bg-white border border-zinc-200 rounded-2xl hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/5 transition-all text-left group relative overflow-hidden"
+                          className="flex flex-col bg-white border border-zinc-100 rounded-3xl overflow-hidden hover:shadow-xl hover:shadow-emerald-900/5 transition-all group text-left h-full"
                         >
-                          <div className="relative z-10">
-                            <h3 className="font-bold text-zinc-900 text-lg">{service.name}</h3>
-                            {service.description && (
-                              <p className="text-sm text-zinc-500 mt-1 line-clamp-2 max-w-md">{service.description}</p>
+                          <div className="h-40 bg-zinc-100 relative overflow-hidden">
+                            {service.imageUrl ? (
+                              <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-zinc-50 text-zinc-300">
+                                <ImageIcon size={40} />
+                              </div>
                             )}
-                            <p className="text-xs font-medium text-zinc-400 mt-2 flex items-center gap-1">
-                              <Clock size={12} /> {service.durationMinutes} min
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 relative z-10 pl-4">
-                            <span className="font-bold text-emerald-600 text-lg">R$ {service.price}</span>
-                            <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                              <ChevronRight size={18} />
+                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-zinc-900 shadow-sm">
+                              {service.durationMinutes} min
                             </div>
                           </div>
-                        </button>
+                          <div className="p-5 flex flex-col flex-1">
+                            <h3 className="font-bold text-zinc-900 text-lg mb-1 group-hover:text-emerald-600 transition-colors">{service.name}</h3>
+                            <p className="text-sm text-zinc-500 line-clamp-2 mb-4 flex-1">{service.description || 'Sem descrição'}</p>
+                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-50">
+                              <span className="text-lg font-bold text-emerald-600">R$ {service.price}</span>
+                              <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                                <ChevronRight size={18} />
+                              </div>
+                            </div>
+                          </div>
+                        </motion.button>
                       ))}
                     </div>
                   </div>
