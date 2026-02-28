@@ -38,6 +38,8 @@ export interface Servico {
   price: number;
   durationMinutes: number;
   isActive: boolean;
+  category?: string;
+  imageUrl?: string;
 }
 
 export interface Agendamento {

@@ -228,30 +228,55 @@ export default function PublicSite() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="space-y-4"
+                className="space-y-8"
               >
-                <h2 className="text-xl font-bold text-zinc-900">Escolha um serviço</h2>
-                <div className="grid gap-3">
-                  {servicos.map(service => (
-                    <button
-                      key={service.id}
-                      onClick={() => {
-                        setSelectedService(service);
-                        setStep('datetime');
-                      }}
-                      className="flex items-center justify-between p-4 bg-white border border-zinc-200 rounded-2xl hover:border-emerald-500 hover:shadow-md transition-all text-left group"
-                    >
-                      <div>
-                        <h3 className="font-bold text-zinc-900">{service.name}</h3>
-                        <p className="text-sm text-zinc-500">{service.durationMinutes} min</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-zinc-900">R$ {service.price}</span>
-                        <ChevronRight size={18} className="text-zinc-300 group-hover:text-emerald-500 transition-colors" />
-                      </div>
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-zinc-900">Escolha um serviço</h2>
+                  <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-3 py-1 rounded-full">
+                    {servicos.length} opções
+                  </span>
                 </div>
+
+                {Object.entries(
+                  servicos.reduce((acc, service) => {
+                    const cat = service.category || 'Geral';
+                    if (!acc[cat]) acc[cat] = [];
+                    acc[cat].push(service);
+                    return acc;
+                  }, {} as Record<string, Servico[]>)
+                ).map(([category, categoryServices]: [string, Servico[]]) => (
+                  <div key={category} className="space-y-3">
+                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">{category}</h3>
+                    <div className="grid gap-3">
+                      {categoryServices.map(service => (
+                        <button
+                          key={service.id}
+                          onClick={() => {
+                            setSelectedService(service);
+                            setStep('datetime');
+                          }}
+                          className="flex items-center justify-between p-5 bg-white border border-zinc-200 rounded-2xl hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/5 transition-all text-left group relative overflow-hidden"
+                        >
+                          <div className="relative z-10">
+                            <h3 className="font-bold text-zinc-900 text-lg">{service.name}</h3>
+                            {service.description && (
+                              <p className="text-sm text-zinc-500 mt-1 line-clamp-2 max-w-md">{service.description}</p>
+                            )}
+                            <p className="text-xs font-medium text-zinc-400 mt-2 flex items-center gap-1">
+                              <Clock size={12} /> {service.durationMinutes} min
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 relative z-10 pl-4">
+                            <span className="font-bold text-emerald-600 text-lg">R$ {service.price}</span>
+                            <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                              <ChevronRight size={18} />
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </motion.div>
             )}
 

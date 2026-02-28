@@ -68,6 +68,16 @@ export const addServico = async (data: Omit<Servico, 'id'>) => {
   return await addDoc(collection(db, 'servicos'), data);
 };
 
+export const updateServico = async (id: string, data: Partial<Servico>) => {
+  const docRef = doc(db, 'servicos', id);
+  await updateDoc(docRef, data);
+};
+
+export const deleteServico = async (id: string) => {
+  const { deleteDoc } = await import('firebase/firestore');
+  await deleteDoc(doc(db, 'servicos', id));
+};
+
 // Agendamentos
 export const getAgendamentos = async (empresaId: string, dateStart: number, dateEnd: number) => {
   // OPTIMIZATION: We fetch by empresaId and filter dates on client-side 

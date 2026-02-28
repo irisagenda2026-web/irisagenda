@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Image as ImageIcon, Plus, Trash2, Layout, DollarSign, Info, Loader2, Upload } from 'lucide-react';
+import { Save, Image as ImageIcon, Plus, Trash2, Layout, DollarSign, Info, Loader2, Upload, Clock } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
-import { getEmpresa, updateEmpresa, getServicos, addServico } from '@/src/services/db';
+import { getEmpresa, updateEmpresa, getServicos, addServico, updateServico, deleteServico } from '@/src/services/db';
 import { uploadImage, deleteImage } from '@/src/services/storage';
 import { Empresa, Servico } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import CorsErrorModal from '@/src/components/CorsErrorModal';
+import ServiceModal from '@/src/components/ServiceModal';
 
 export default function SiteEditor() {
   const { role } = useAuth();
@@ -214,45 +215,73 @@ function GeneralInfoForm({ empresa, setEmpresa }: { empresa: Empresa | null, set
 function ServicesForm({ empresaId }: { empresaId?: string }) {
   const [services, setServices] = useState<Servico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Servico | null>(null);
 
   useEffect(() => {
     if (empresaId) {
-      getServicos(empresaId).then(data => {
-        setServices(data);
-        setIsLoading(false);
-      });
+      loadServices();
     }
   }, [empresaId]);
 
-  const handleAddService = async () => {
+  const loadServices = async () => {
     if (!empresaId) return;
-    const name = prompt('Nome do serviço:');
-    const price = Number(prompt('Preço:'));
-    const duration = Number(prompt('Duração (minutos):'));
+    const data = await getServicos(empresaId);
+    setServices(data);
+    setIsLoading(false);
+  };
 
-    if (name && price && duration) {
+  const handleSaveService = async (data: Partial<Servico>) => {
+    if (!empresaId) return;
+
+    if (editingService) {
+      await updateServico(editingService.id, data);
+    } else {
       await addServico({
         empresaId,
-        name,
-        price,
-        durationMinutes: duration,
-        description: '',
+        name: data.name!,
+        price: data.price!,
+        durationMinutes: data.durationMinutes!,
+        description: data.description || '',
+        category: data.category || 'Geral',
         isActive: true
       });
-      const data = await getServicos(empresaId);
-      setServices(data);
+    }
+    await loadServices();
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este serviço?')) {
+      await deleteServico(id);
+      await loadServices();
     }
   };
+
+  const openNewServiceModal = () => {
+    setEditingService(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditServiceModal = (service: Servico) => {
+    setEditingService(service);
+    setIsModalOpen(true);
+  };
+
+  // Extract unique categories
+  const categories: string[] = Array.from(new Set(services.map(s => s.category || 'Geral')));
 
   if (isLoading) return <Loader2 className="animate-spin mx-auto text-emerald-600" />;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="font-bold text-zinc-900">Seus Serviços</h3>
+        <div>
+          <h3 className="font-bold text-zinc-900">Seus Serviços</h3>
+          <p className="text-sm text-zinc-500">Gerencie os serviços oferecidos pela sua clínica.</p>
+        </div>
         <button 
-          onClick={handleAddService}
-          className="flex items-center gap-2 text-sm bg-zinc-900 text-white px-4 py-2 rounded-xl hover:bg-zinc-800 transition-all"
+          onClick={openNewServiceModal}
+          className="flex items-center gap-2 text-sm bg-zinc-900 text-white px-4 py-2 rounded-xl hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-900/10"
         >
           <Plus size={16} />
           Novo Serviço
@@ -261,27 +290,66 @@ function ServicesForm({ empresaId }: { empresaId?: string }) {
 
       <div className="space-y-3">
         {services.map((service) => (
-          <div key={service.id} className="flex items-center justify-between p-4 bg-zinc-50 border border-zinc-200 rounded-2xl group">
+          <div 
+            key={service.id} 
+            onClick={() => openEditServiceModal(service)}
+            className="flex items-center justify-between p-4 bg-white border border-zinc-200 rounded-2xl group hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer"
+          >
             <div className="flex gap-4 items-center">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center font-bold">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold text-lg shrink-0">
                 {service.name[0]}
               </div>
               <div>
-                <h4 className="font-semibold text-zinc-900">{service.name}</h4>
-                <p className="text-xs text-zinc-500">{service.durationMinutes} min • R$ {service.price}</p>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-zinc-900">{service.name}</h4>
+                  {service.category && (
+                    <span className="text-[10px] bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                      {service.category}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-zinc-500 line-clamp-1">{service.description || 'Sem descrição'}</p>
+                <div className="flex items-center gap-3 mt-1 text-xs font-medium text-zinc-400">
+                  <span className="flex items-center gap-1"><Clock size={12} /> {service.durationMinutes} min</span>
+                  <span className="flex items-center gap-1 text-emerald-600"><DollarSign size={12} /> R$ {service.price}</span>
+                </div>
               </div>
             </div>
             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-              <button className="p-2 text-zinc-400 hover:text-red-500 transition-colors">
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleDeleteService(service.id); }}
+                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                title="Excluir"
+              >
                 <Trash2 size={18} />
               </button>
             </div>
           </div>
         ))}
         {services.length === 0 && (
-          <p className="text-center text-zinc-500 py-8">Nenhum serviço cadastrado ainda.</p>
+          <div className="text-center py-12 bg-zinc-50 rounded-3xl border border-dashed border-zinc-200">
+            <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-400">
+              <DollarSign size={24} />
+            </div>
+            <h3 className="font-bold text-zinc-900">Nenhum serviço cadastrado</h3>
+            <p className="text-sm text-zinc-500 mb-4">Comece adicionando os serviços que você oferece.</p>
+            <button 
+              onClick={openNewServiceModal}
+              className="text-emerald-600 font-bold hover:underline text-sm"
+            >
+              Adicionar primeiro serviço
+            </button>
+          </div>
         )}
       </div>
+
+      <ServiceModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveService}
+        initialData={editingService}
+        categories={categories}
+      />
     </div>
   );
 }
