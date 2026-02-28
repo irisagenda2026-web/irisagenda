@@ -52,7 +52,9 @@ export default function SignupPage() {
       navigate('/dashboard/site');
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/configuration-not-found' || err.code === 'auth/admin-restricted-operation' || err.code === 'auth/operation-not-allowed') {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Este e-mail já está cadastrado. Por favor, faça login.');
+      } else if (err.code === 'auth/configuration-not-found' || err.code === 'auth/admin-restricted-operation' || err.code === 'auth/operation-not-allowed') {
         setError('Erro de configuração: Habilite o "Email/Senha" no Firebase Console -> Authentication -> Sign-in method.');
       } else {
         setError(err.message || 'Erro ao criar conta. Verifique os dados e tente novamente.');
@@ -149,6 +151,15 @@ export default function SignupPage() {
               )}
             </button>
           </form>
+
+          <div className="mt-8 pt-6 border-t border-zinc-100 text-center">
+            <p className="text-zinc-500 text-sm">
+              Já tem uma conta?{' '}
+              <Link to="/login" className="text-emerald-600 font-bold hover:underline">
+                Entrar agora
+              </Link>
+            </p>
+          </div>
 
           <p className="mt-6 text-center text-sm text-zinc-500">
             Ao se cadastrar, você concorda com nossos <a href="#" className="underline">Termos de Uso</a> e <a href="#" className="underline">Privacidade</a>.
