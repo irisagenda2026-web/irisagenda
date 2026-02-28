@@ -82,7 +82,7 @@ export default function SignupPage() {
           className="max-w-md w-full"
         >
           <div className="mb-8 flex flex-col items-start">
-            <Logo className="mb-8" />
+            <Logo className="mb-8 h-16" />
             <h1 className="text-3xl font-bold text-zinc-900 mb-2">Comece sua jornada</h1>
             <p className="text-zinc-500">Você selecionou o plano <span className="font-bold text-emerald-600">{planName}</span>. Preencha os dados abaixo para criar sua conta.</p>
           </div>

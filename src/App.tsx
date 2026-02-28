@@ -60,7 +60,7 @@ function AppLayout() {
       <nav className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 z-40">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Logo />
+            <Logo className="h-10" />
           </Link>
 
           {/* Desktop Navigation */}

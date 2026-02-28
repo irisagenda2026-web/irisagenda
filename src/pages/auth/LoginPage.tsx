@@ -51,7 +51,7 @@ export default function LoginPage() {
       >
         <div className="p-8 md:p-12">
           <div className="text-center mb-10 flex flex-col items-center">
-            <Logo className="mb-6" />
+            <Logo className="mb-6 h-16" />
             <h1 className="text-3xl font-bold text-zinc-900 mb-2">Bem-vindo de volta</h1>
             <p className="text-zinc-500">Acesse sua conta para gerenciar sua agenda.</p>
           </div>

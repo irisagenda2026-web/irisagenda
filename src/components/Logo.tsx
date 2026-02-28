@@ -15,7 +15,7 @@ export default function Logo({ className, variant = 'dark' }: LogoProps) {
       <img 
         src={settings.logoUrl} 
         alt={`${settings.platformName} Logo`} 
-        className={cn("h-8 w-auto object-contain", className)} 
+        className={cn("h-10 w-auto object-contain", className)} 
       />
     );
   }
@@ -27,7 +27,7 @@ export default function Logo({ className, variant = 'dark' }: LogoProps) {
       variant === 'dark' ? "text-zinc-900" : "text-white",
       className
     )}>
-      <div className="w-8 h-8 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-lg">
+      <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-lg">
         {settings.platformName.charAt(0)}
       </div>
       {settings.platformName}

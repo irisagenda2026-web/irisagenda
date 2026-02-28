@@ -246,7 +246,7 @@ export default function HomePage() {
       <footer className="py-12 border-t border-zinc-100">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
-            <Logo />
+            <Logo className="h-12" />
           </div>
           <p className="text-zinc-500 text-sm">
             © 2026 Iris Agenda Tecnologia LTDA. Todos os direitos reservados.
