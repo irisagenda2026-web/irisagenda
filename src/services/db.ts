@@ -213,15 +213,17 @@ export const getBusinessHours = async (empresaId: string) => {
 
 // Availability Overrides
 export const getAvailabilityOverrides = async (empresaId: string, month: string) => {
-  // month format: YYYY-MM
+  // OPTIMIZATION: Fetch by empresaId and filter by month on client-side
+  // to avoid requiring a composite index for (empresaId, date).
   const q = query(
     collection(db, 'availabilityOverrides'),
-    where('empresaId', '==', empresaId),
-    where('date', '>=', `${month}-01`),
-    where('date', '<=', `${month}-31`)
+    where('empresaId', '==', empresaId)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AvailabilityOverride));
+  const allOverrides = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AvailabilityOverride));
+  
+  // Filter by month (YYYY-MM)
+  return allOverrides.filter(o => o.date.startsWith(month));
 };
 
 export const saveAvailabilityOverride = async (data: Omit<AvailabilityOverride, 'id' | 'updatedAt'>) => {
