@@ -7,6 +7,7 @@ import { getEmpresa, updateEmpresa, getServicos, addServico } from '@/src/servic
 import { uploadImage, deleteImage } from '@/src/services/storage';
 import { Empresa, Servico } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import CorsErrorModal from '@/src/components/CorsErrorModal';
 
 export default function SiteEditor() {
   const { role } = useAuth();
@@ -14,6 +15,7 @@ export default function SiteEditor() {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showCorsModal, setShowCorsModal] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -114,11 +116,12 @@ export default function SiteEditor() {
             <div className="p-8">
               {activeTab === 'info' && <GeneralInfoForm empresa={empresa} setEmpresa={setEmpresa} />}
               {activeTab === 'services' && <ServicesForm empresaId={empresa?.id} />}
-              {activeTab === 'gallery' && <GalleryForm empresa={empresa} setEmpresa={setEmpresa} />}
+              {activeTab === 'gallery' && <GalleryForm empresa={empresa} setEmpresa={setEmpresa} onCorsError={() => setShowCorsModal(true)} />}
             </div>
           </main>
         </div>
       </div>
+      <CorsErrorModal isOpen={showCorsModal} onClose={() => setShowCorsModal(false)} />
     </div>
   );
 }
@@ -283,7 +286,7 @@ function ServicesForm({ empresaId }: { empresaId?: string }) {
   );
 }
 
-function GalleryForm({ empresa, setEmpresa }: { empresa: Empresa | null, setEmpresa: any }) {
+function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | null, setEmpresa: any, onCorsError: () => void }) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -302,9 +305,13 @@ function GalleryForm({ empresa, setEmpresa }: { empresa: Empresa | null, setEmpr
       const updatedEmpresa = { ...empresa, gallery: newGallery };
       setEmpresa(updatedEmpresa);
       await updateEmpresa(empresa.id, { gallery: newGallery });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Erro ao fazer upload da imagem.');
+      if (err.message && (err.message.includes('network') || err.message.includes('CORS') || err.code === 'storage/unknown')) {
+        onCorsError();
+      } else {
+        alert('Erro ao fazer upload da imagem.');
+      }
     } finally {
       setIsUploading(false);
     }
