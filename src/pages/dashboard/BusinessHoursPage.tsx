@@ -9,7 +9,9 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon,
   ChevronRight,
-  Loader2
+  Loader2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { auth } from '../../services/firebase';
 import { getBusinessHours, saveBusinessHours } from '../../services/db';
@@ -149,6 +151,24 @@ export default function BusinessHoursPage() {
     });
   };
 
+  const copySchedule = (sourceDayId: string) => {
+    const sourceSchedule = hours[sourceDayId];
+    setHours(prev => {
+      const next = { ...prev };
+      // Copy to all other days except Sunday (0) and Saturday (6) if it's a weekday
+      // Or just provide a simple "Apply to all" for now
+      DAYS_OF_WEEK.forEach(day => {
+        if (day.id !== sourceDayId) {
+          next[day.id] = JSON.parse(JSON.stringify(sourceSchedule));
+        }
+      });
+      return next;
+    });
+    
+    setMessage({ type: 'success', text: `Horário de ${DAYS_OF_WEEK.find(d => d.id === sourceDayId)?.label} aplicado a todos os dias!` });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -227,6 +247,16 @@ export default function BusinessHoursPage() {
                         )}
                       />
                     </button>
+
+                    {schedule.isOpen && (
+                      <button
+                        onClick={() => copySchedule(day.id)}
+                        title="Aplicar este horário a todos os outros dias"
+                        className="p-2 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Slots Section */}
