@@ -1,0 +1,9 @@
+{
+  "name": "Iris Agenda",
+  "description": "SaaS de agendamento e gestão para nichos de beleza, estética e saúde com foco em multi-tenancy e whitelabel.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
