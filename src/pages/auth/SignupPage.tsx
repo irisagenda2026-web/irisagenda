@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Check, ArrowRight, Shield, Zap, Star, Loader2 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
