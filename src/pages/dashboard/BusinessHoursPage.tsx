@@ -66,13 +66,14 @@ export default function BusinessHoursPage() {
   const [activeTab, setActiveTab] = useState<'standard' | 'calendar'>('calendar');
   const [hours, setHours] = useState<BusinessHours>(DEFAULT_HOURS);
   const [overrides, setOverrides] = useState<AvailabilityOverride[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentMonth]);
 
   const loadData = async () => {
     const user = auth.currentUser;
@@ -81,7 +82,7 @@ export default function BusinessHoursPage() {
     try {
       const [hoursData, overridesData] = await Promise.all([
         getBusinessHours(user.uid),
-        getAvailabilityOverrides(user.uid, format(new Date(), 'yyyy-MM'))
+        getAvailabilityOverrides(user.uid, format(currentMonth, 'yyyy-MM'))
       ]);
 
       if (hoursData) setHours(hoursData);
@@ -105,7 +106,7 @@ export default function BusinessHoursPage() {
         slots
       });
       // Refresh overrides
-      const data = await getAvailabilityOverrides(user.uid, format(new Date(), 'yyyy-MM'));
+      const data = await getAvailabilityOverrides(user.uid, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
       setMessage({ type: 'success', text: 'Disponibilidade do dia atualizada!' });
       setTimeout(() => setMessage(null), 3000);
@@ -122,7 +123,7 @@ export default function BusinessHoursPage() {
     try {
       await bulkSaveAvailability(user.uid, dates, { isOpen, slots });
       // Refresh overrides
-      const data = await getAvailabilityOverrides(user.uid, format(new Date(), 'yyyy-MM'));
+      const data = await getAvailabilityOverrides(user.uid, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
       setMessage({ type: 'success', text: `${dates.length} dias atualizados com sucesso!` });
       setTimeout(() => setMessage(null), 3000);
@@ -284,6 +285,8 @@ export default function BusinessHoursPage() {
           onSaveOverride={handleSaveOverride}
           onBulkSave={handleBulkSave}
           empresaId={auth.currentUser?.uid || ''}
+          currentMonth={currentMonth}
+          onMonthChange={setCurrentMonth}
         />
       ) : (
         <div className="space-y-6">

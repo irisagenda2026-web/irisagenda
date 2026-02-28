@@ -38,10 +38,18 @@ interface AvailabilityCalendarProps {
   onSaveOverride: (date: string, isOpen: boolean, slots: AvailabilitySlot[]) => Promise<void>;
   onBulkSave: (dates: string[], isOpen: boolean, slots: AvailabilitySlot[]) => Promise<void>;
   empresaId: string;
+  currentMonth: Date;
+  onMonthChange: (date: Date) => void;
 }
 
-export default function AvailabilityCalendar({ overrides, onSaveOverride, onBulkSave, empresaId }: AvailabilityCalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+export default function AvailabilityCalendar({ 
+  overrides, 
+  onSaveOverride, 
+  onBulkSave, 
+  empresaId,
+  currentMonth,
+  onMonthChange
+}: AvailabilityCalendarProps) {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -208,13 +216,13 @@ export default function AvailabilityCalendar({ overrides, onSaveOverride, onBulk
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-zinc-100 rounded-lg p-1">
               <button 
-                onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                onClick={() => onMonthChange(subMonths(currentMonth, 1))}
                 className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button 
-                onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                onClick={() => onMonthChange(addMonths(currentMonth, 1))}
                 className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all"
               >
                 <ChevronRight className="w-4 h-4" />
