@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, memoryLocalCache } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
-import { getAnalytics } from 'firebase/analytics';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBpnKkcq_g2CYBaCEq2cFujKcElHtdkxXc",
@@ -22,5 +22,24 @@ export const db = initializeFirestore(app, {
 });
 
 export const auth = getAuth(app);
+console.log("Firebase Auth initialized");
+
+// Set persistence explicitly to handle environments where IndexedDB might be restricted
+console.log("Setting Auth persistence...");
+setPersistence(auth, browserLocalPersistence).then(() => {
+  console.log("Auth persistence set to browserLocalPersistence");
+}).catch((err) => {
+  console.error("Auth Persistence Error:", err);
+});
+
 export const storage = getStorage(app);
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+
+// Only initialize analytics if supported
+let analyticsInstance: any = null;
+isSupported().then(supported => {
+  if (supported) {
+    analyticsInstance = getAnalytics(app);
+  }
+});
+
+export const analytics = analyticsInstance;

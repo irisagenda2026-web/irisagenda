@@ -36,9 +36,13 @@ export default function LoginPage() {
     }, 15000);
 
     try {
+      console.log("Auth object state:", {
+        currentUser: auth.currentUser?.uid,
+        config: auth.config
+      });
       console.log("Attempting login for:", email);
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login successful");
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log("Login successful, user:", result.user.uid);
       clearTimeout(timeoutId);
       // AuthContext will handle the redirect via useEffect
     } catch (err: any) {
@@ -138,7 +142,10 @@ export default function LoginPage() {
               className="w-full bg-zinc-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70"
             >
               {isLoading ? (
-                <Loader2 className="animate-spin" size={20} />
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="animate-spin" size={20} />
+                  <span className="text-xs font-normal opacity-70">Conectando...</span>
+                </div>
               ) : (
                 <>
                   Entrar
@@ -146,6 +153,16 @@ export default function LoginPage() {
                 </>
               )}
             </button>
+
+            {isLoading && (
+              <button 
+                type="button"
+                onClick={() => setIsLoading(false)}
+                className="w-full mt-2 text-xs text-zinc-400 hover:text-zinc-600 underline"
+              >
+                O login está demorando? Clique aqui para cancelar e tentar de novo.
+              </button>
+            )}
           </form>
 
           <div className="mt-10 pt-8 border-t border-zinc-100 text-center">
