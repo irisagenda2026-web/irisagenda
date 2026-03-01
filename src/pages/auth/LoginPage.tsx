@@ -71,7 +71,7 @@ export default function LoginPage() {
           setError('Erro de configuração no servidor. Por favor, tente mais tarde.');
           break;
         case 'auth/network-request-failed':
-          setError('Erro de rede. Verifique sua conexão com a internet.');
+          setError('Erro de rede. Isso geralmente é causado por bloqueadores de anúncios (AdBlock), VPN ou restrições do navegador. Tente desativar extensões ou use uma aba anônima.');
           break;
         default:
           setError('Erro ao entrar. Verifique seus dados ou tente criar uma nova conta.');
