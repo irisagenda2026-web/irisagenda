@@ -10,6 +10,7 @@ const plans = [
     description: 'Perfeito para profissionais autônomos.',
     features: [
       'Agenda Online',
+      'Até 2 profissionais',
       'Até 100 agendamentos/mês',
       'Lembretes via WhatsApp (limitado)',
       'Mini-site básico',

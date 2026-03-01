@@ -1,6 +1,6 @@
 export const PLAN_LIMITS = {
   basic: {
-    maxProfessionals: 1,
+    maxProfessionals: 2,
     maxServices: 10,
     features: ['Agendamento Online', 'Dashboard Básico'],
   },
