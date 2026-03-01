@@ -14,9 +14,10 @@ import {
   User,
   ImageIcon
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { cn } from '@/src/utils/cn';
-import { getEmpresaBySlug, getServicos, createAgendamento, getAgendamentos, getBloqueios, getReviews, addReview } from '@/src/services/db';
-import { Empresa, Servico, Agendamento, Bloqueio, Review } from '@/src/types/firebase';
+import { getEmpresaBySlug, getServicos, createAgendamento, getAgendamentos, getBloqueios, getReviews, addReview, getProfissionais, getBusinessHours, getAvailabilityOverrides } from '@/src/services/db';
+import { Empresa, Servico, Agendamento, Bloqueio, Review, Profissional, AvailabilityOverride } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function PublicSite() {
@@ -26,16 +27,20 @@ export default function PublicSite() {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [step, setStep] = useState<'service' | 'datetime' | 'confirm' | 'success'>('service');
+  const [step, setStep] = useState<'service' | 'profissional' | 'datetime' | 'confirm' | 'success'>('service');
   
   // Selection State
   const [selectedService, setSelectedService] = useState<Servico | null>(null);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [selectedProfissional, setSelectedProfissional] = useState<Profissional | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAgendamentos, setExistingAgendamentos] = useState<Agendamento[]>([]);
   const [existingBloqueios, setExistingBloqueios] = useState<Bloqueio[]>([]);
+  const [businessHours, setBusinessHours] = useState<any>(null);
+  const [availabilityOverrides, setAvailabilityOverrides] = useState<AvailabilityOverride[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   useEffect(() => {
@@ -44,12 +49,14 @@ export default function PublicSite() {
         const emp = await getEmpresaBySlug(slug);
         if (emp) {
           setEmpresa(emp);
-          const [svs, revs] = await Promise.all([
+          const [svs, revs, profs] = await Promise.all([
             getServicos(emp.id),
-            getReviews(emp.id)
+            getReviews(emp.id),
+            getProfissionais(emp.id)
           ]);
           setServicos(svs.filter(s => s.isActive));
           setReviews(revs);
+          setProfissionais(profs.filter(p => p.isActive));
         }
       }
       setIsLoading(false);
@@ -59,62 +66,96 @@ export default function PublicSite() {
 
   useEffect(() => {
     const loadSlots = async () => {
-      if (empresa && selectedDate) {
+      if (empresa && selectedDate && selectedProfissional) {
         setIsLoadingSlots(true);
         const start = new Date(selectedDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(selectedDate);
         end.setHours(23, 59, 59, 999);
         
-        const [ags, bls] = await Promise.all([
+        const month = format(selectedDate, 'yyyy-MM');
+        
+        const [ags, bls, hours, overrides] = await Promise.all([
           getAgendamentos(empresa.id, start.getTime(), end.getTime()),
-          getBloqueios(empresa.id, start.getTime(), end.getTime())
+          getBloqueios(empresa.id, selectedProfissional.id, start.getTime(), end.getTime()),
+          getBusinessHours(empresa.id, selectedProfissional.id),
+          getAvailabilityOverrides(empresa.id, selectedProfissional.id, month)
         ]);
-        setExistingAgendamentos(ags);
+        
+        // Filter agendamentos for this professional
+        setExistingAgendamentos(ags.filter(a => a.profissionalId === selectedProfissional.id));
         setExistingBloqueios(bls);
+        setBusinessHours(hours);
+        setAvailabilityOverrides(overrides);
         setIsLoadingSlots(false);
       }
     };
     loadSlots();
-  }, [empresa, selectedDate]);
+  }, [empresa, selectedDate, selectedProfissional]);
 
   const generateTimeSlots = () => {
-    if (!selectedService) return [];
+    if (!selectedService || !selectedProfissional) return [];
     
-    const slots = [];
-    const startHour = 8; // 08:00
-    const endHour = 19;  // 19:00
-    const interval = 30; // 30 minutes intervals
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const dayOfWeek = selectedDate.getDay().toString();
     
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let min = 0; min < 60; min += interval) {
-        const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-        
-        // Check if this slot is available
-        const slotStart = new Date(selectedDate);
-        slotStart.setHours(hour, min, 0, 0);
-        const slotEnd = new Date(slotStart.getTime() + selectedService.durationMinutes * 60000);
-        
-        // Don't show past times if today
-        if (slotStart < new Date()) continue;
-
-        const isOccupied = existingAgendamentos.some(ag => {
-          const agStart = ag.startTime;
-          const agEnd = ag.endTime;
-          // Overlap logic: (StartA < EndB) and (EndA > StartB)
-          return (slotStart.getTime() < agEnd) && (slotEnd.getTime() > agStart);
-        });
-
-        const isBlocked = existingBloqueios.some(bl => {
-          return (slotStart.getTime() < bl.endTime) && (slotEnd.getTime() > bl.startTime);
-        });
-
-        if (!isOccupied && !isBlocked) {
-          slots.push(timeStr);
-        }
-      }
+    // Check for overrides first
+    const override = availabilityOverrides.find(o => o.date === dateStr);
+    
+    let activeSlots: any[] = [];
+    
+    if (override) {
+      if (!override.isOpen) return []; // Closed for the day
+      activeSlots = override.slots;
+    } else if (businessHours && businessHours[dayOfWeek]?.isOpen) {
+      activeSlots = businessHours[dayOfWeek].slots;
+    } else {
+      return []; // No business hours defined for this day
     }
-    return slots;
+
+    const availableTimes: string[] = [];
+    
+    activeSlots.forEach(slot => {
+      // Check if service is allowed in this slot
+      if (slot.serviceIds && slot.serviceIds.length > 0 && !slot.serviceIds.includes(selectedService.id)) {
+        return;
+      }
+
+      const [startH, startM] = slot.start.split(':').map(Number);
+      const [endH, endM] = slot.end.split(':').map(Number);
+      
+      let current = new Date(selectedDate);
+      current.setHours(startH, startM, 0, 0);
+      
+      const end = new Date(selectedDate);
+      end.setHours(endH, endM, 0, 0);
+
+      while (current.getTime() + selectedService.durationMinutes * 60000 <= end.getTime()) {
+        const timeStr = format(current, 'HH:mm');
+        const slotStart = current.getTime();
+        const slotEnd = slotStart + selectedService.durationMinutes * 60000;
+
+        // Don't show past times if today
+        if (slotStart > Date.now()) {
+          const isOccupied = existingAgendamentos.some(ag => {
+            return (slotStart < ag.endTime) && (slotEnd > ag.startTime);
+          });
+
+          const isBlocked = existingBloqueios.some(bl => {
+            return (slotStart < bl.endTime) && (slotEnd > bl.startTime);
+          });
+
+          if (!isOccupied && !isBlocked) {
+            availableTimes.push(timeStr);
+          }
+        }
+        
+        // Advance by 15 minutes for more granular selection
+        current = new Date(current.getTime() + 15 * 60000);
+      }
+    });
+
+    return Array.from(new Set(availableTimes)).sort();
   };
 
   const handleSchedule = async () => {
@@ -135,7 +176,7 @@ export default function PublicSite() {
         clientePhone: customerInfo.phone,
         servicoId: selectedService.id,
         servicoName: selectedService.name,
-        profissionalId: 'default',
+        profissionalId: selectedProfissional?.id || 'default',
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'pending',
@@ -298,7 +339,7 @@ export default function PublicSite() {
                           key={service.id}
                           onClick={() => {
                             setSelectedService(service);
-                            setStep('datetime');
+                            setStep('profissional');
                           }}
                           className="flex flex-col bg-white border border-zinc-100 rounded-3xl overflow-hidden hover:shadow-xl hover:shadow-emerald-900/5 transition-all group text-left h-full"
                         >
@@ -332,6 +373,47 @@ export default function PublicSite() {
               </motion.div>
             )}
 
+            {step === 'profissional' && (
+              <motion.div
+                key="step-profissional"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-6"
+              >
+                <button onClick={() => setStep('service')} className="text-sm text-emerald-600 font-medium hover:underline">
+                  ← Voltar para serviços
+                </button>
+                
+                <div>
+                  <h2 className="text-2xl font-bold text-zinc-900 mb-2">Escolha o profissional</h2>
+                  <p className="text-zinc-500">Selecione quem irá realizar o seu atendimento.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {profissionais.map(prof => (
+                    <button
+                      key={prof.id}
+                      onClick={() => {
+                        setSelectedProfissional(prof);
+                        setStep('datetime');
+                      }}
+                      className="flex items-center gap-4 p-4 bg-white border border-zinc-100 rounded-3xl hover:border-emerald-500 hover:shadow-lg transition-all text-left group"
+                    >
+                      <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-2xl shrink-0">
+                        {prof.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-zinc-900 group-hover:text-emerald-600 transition-colors">{prof.name}</h3>
+                        <p className="text-xs text-zinc-500 line-clamp-1">{prof.bio || 'Especialista'}</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-zinc-300 ml-auto group-hover:text-emerald-500 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {step === 'datetime' && (
               <motion.div
                 key="step-datetime"
@@ -340,8 +422,8 @@ export default function PublicSite() {
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-6"
               >
-                <button onClick={() => setStep('service')} className="text-sm text-emerald-600 font-medium hover:underline">
-                  ← Voltar para serviços
+                <button onClick={() => setStep('profissional')} className="text-sm text-emerald-600 font-medium hover:underline">
+                  ← Voltar para profissionais
                 </button>
                 
                 <div>
@@ -423,6 +505,15 @@ export default function PublicSite() {
                   <h2 className="text-xl font-bold text-zinc-900 mb-6">Confirmar Agendamento</h2>
                   
                   <div className="space-y-4 mb-8">
+                    <div className="flex items-center gap-3 text-zinc-600">
+                      <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center">
+                        <User size={18} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-zinc-400">Profissional</p>
+                        <p className="font-bold text-zinc-900">{selectedProfissional?.name}</p>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-3 text-zinc-600">
                       <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center">
                         <Calendar size={18} />

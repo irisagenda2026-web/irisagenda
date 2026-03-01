@@ -151,14 +151,23 @@ export const addReview = async (data: Omit<Review, 'id' | 'createdAt'>) => {
 };
 
 // Bloqueios
-export const getBloqueios = async (empresaId: string, dateStart: number, dateEnd: number) => {
+export const getBloqueios = async (empresaId: string, profissionalId: string | null, dateStart: number, dateEnd: number) => {
   // OPTIMIZATION: Client-side filtering to avoid index requirement
-  const q = query(
-    collection(db, 'bloqueios'), 
-    where('empresaId', '==', empresaId)
-  );
+  let q;
+  if (profissionalId) {
+    q = query(
+      collection(db, 'bloqueios'), 
+      where('empresaId', '==', empresaId),
+      where('profissionalId', '==', profissionalId)
+    );
+  } else {
+    q = query(
+      collection(db, 'bloqueios'), 
+      where('empresaId', '==', empresaId)
+    );
+  }
   const querySnapshot = await getDocs(q);
-  const allBloqueios = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bloqueio));
+  const allBloqueios = querySnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as Bloqueio));
   
   return allBloqueios.filter(b => b.startTime >= dateStart && b.startTime <= dateEnd);
 };
@@ -200,24 +209,26 @@ export const deleteProfissional = async (id: string) => {
 };
 
 // Horários de Expediente
-export const saveBusinessHours = async (empresaId: string, hours: any) => {
-  const docRef = doc(db, 'businessHours', empresaId);
-  await setDoc(docRef, { hours, updatedAt: Date.now() });
+export const saveBusinessHours = async (empresaId: string, profissionalId: string, hours: any) => {
+  const id = `${empresaId}_${profissionalId}`;
+  const docRef = doc(db, 'businessHours', id);
+  await setDoc(docRef, { hours, empresaId, profissionalId, updatedAt: Date.now() });
 };
 
-export const getBusinessHours = async (empresaId: string) => {
-  const docRef = doc(db, 'businessHours', empresaId);
+export const getBusinessHours = async (empresaId: string, profissionalId: string) => {
+  const id = `${empresaId}_${profissionalId}`;
+  const docRef = doc(db, 'businessHours', id);
   const snap = await getDoc(docRef);
   return snap.exists() ? snap.data().hours : null;
 };
 
 // Availability Overrides
-export const getAvailabilityOverrides = async (empresaId: string, month: string) => {
-  // OPTIMIZATION: Fetch by empresaId and filter by month on client-side
-  // to avoid requiring a composite index for (empresaId, date).
+export const getAvailabilityOverrides = async (empresaId: string, profissionalId: string, month: string) => {
+  // OPTIMIZATION: Fetch by empresaId and profissionalId, then filter by month on client-side
   const q = query(
     collection(db, 'availabilityOverrides'),
-    where('empresaId', '==', empresaId)
+    where('empresaId', '==', empresaId),
+    where('profissionalId', '==', profissionalId)
   );
   const querySnapshot = await getDocs(q);
   const allOverrides = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AvailabilityOverride));
@@ -227,7 +238,7 @@ export const getAvailabilityOverrides = async (empresaId: string, month: string)
 };
 
 export const saveAvailabilityOverride = async (data: Omit<AvailabilityOverride, 'id' | 'updatedAt'>) => {
-  const id = `${data.empresaId}_${data.date}`;
+  const id = `${data.empresaId}_${data.profissionalId}_${data.date}`;
   const docRef = doc(db, 'availabilityOverrides', id);
   await setDoc(docRef, {
     ...data,
@@ -236,17 +247,18 @@ export const saveAvailabilityOverride = async (data: Omit<AvailabilityOverride, 
   });
 };
 
-export const bulkSaveAvailability = async (empresaId: string, dates: string[], config: Omit<AvailabilityOverride, 'id' | 'empresaId' | 'date' | 'updatedAt'>) => {
+export const bulkSaveAvailability = async (empresaId: string, profissionalId: string, dates: string[], config: Omit<AvailabilityOverride, 'id' | 'empresaId' | 'profissionalId' | 'date' | 'updatedAt'>) => {
   const { writeBatch } = await import('firebase/firestore');
   const batch = writeBatch(db);
   
   dates.forEach(date => {
-    const id = `${empresaId}_${date}`;
+    const id = `${empresaId}_${profissionalId}_${date}`;
     const docRef = doc(db, 'availabilityOverrides', id);
     batch.set(docRef, {
       ...config,
       id,
       empresaId,
+      profissionalId,
       date,
       updatedAt: Date.now()
     });

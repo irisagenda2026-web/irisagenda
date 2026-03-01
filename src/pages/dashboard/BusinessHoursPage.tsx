@@ -13,7 +13,8 @@ import {
   Copy,
   Check,
   CalendarDays,
-  Settings
+  Settings,
+  Users
 } from 'lucide-react';
 import { auth } from '../../services/firebase';
 import { 
@@ -21,11 +22,12 @@ import {
   saveBusinessHours, 
   getAvailabilityOverrides, 
   saveAvailabilityOverride, 
-  bulkSaveAvailability 
+  bulkSaveAvailability,
+  getProfissionais
 } from '../../services/db';
 import { cn } from '../../utils/cn';
 import AvailabilityCalendar from '../../components/dashboard/AvailabilityCalendar';
-import { AvailabilityOverride, AvailabilitySlot } from '../../types/firebase';
+import { AvailabilityOverride, AvailabilitySlot, Profissional } from '../../types/firebase';
 import { format } from 'date-fns';
 
 const DAYS_OF_WEEK = [
@@ -66,27 +68,53 @@ export default function BusinessHoursPage() {
   const [activeTab, setActiveTab] = useState<'standard' | 'calendar'>('calendar');
   const [hours, setHours] = useState<BusinessHours>(DEFAULT_HOURS);
   const [overrides, setOverrides] = useState<AvailabilityOverride[]>([]);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [selectedProfissionalId, setSelectedProfissionalId] = useState<string>('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [currentMonth]);
+    loadInitialData();
+  }, []);
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (selectedProfissionalId) {
+      loadData();
+    }
+  }, [currentMonth, selectedProfissionalId]);
+
+  const loadInitialData = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
     try {
+      const profs = await getProfissionais(user.uid);
+      setProfissionais(profs);
+      if (profs.length > 0) {
+        setSelectedProfissionalId(profs[0].id);
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar profissionais:', error);
+      setLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    const user = auth.currentUser;
+    if (!user || !selectedProfissionalId) return;
+
+    try {
       const [hoursData, overridesData] = await Promise.all([
-        getBusinessHours(user.uid),
-        getAvailabilityOverrides(user.uid, format(currentMonth, 'yyyy-MM'))
+        getBusinessHours(user.uid, selectedProfissionalId),
+        getAvailabilityOverrides(user.uid, selectedProfissionalId, format(currentMonth, 'yyyy-MM'))
       ]);
 
-      if (hoursData) setHours(hoursData);
-      if (overridesData) setOverrides(overridesData);
+      setHours(hoursData || DEFAULT_HOURS);
+      setOverrides(overridesData || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -96,17 +124,18 @@ export default function BusinessHoursPage() {
 
   const handleSaveOverride = async (date: string, isOpen: boolean, slots: AvailabilitySlot[]) => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || !selectedProfissionalId) return;
 
     try {
       await saveAvailabilityOverride({
         empresaId: user.uid,
+        profissionalId: selectedProfissionalId,
         date,
         isOpen,
         slots
       });
       // Refresh overrides
-      const data = await getAvailabilityOverrides(user.uid, format(currentMonth, 'yyyy-MM'));
+      const data = await getAvailabilityOverrides(user.uid, selectedProfissionalId, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
       setMessage({ type: 'success', text: 'Disponibilidade do dia atualizada!' });
       setTimeout(() => setMessage(null), 3000);
@@ -118,12 +147,12 @@ export default function BusinessHoursPage() {
 
   const handleBulkSave = async (dates: string[], isOpen: boolean, slots: AvailabilitySlot[]) => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || !selectedProfissionalId) return;
 
     try {
-      await bulkSaveAvailability(user.uid, dates, { isOpen, slots });
+      await bulkSaveAvailability(user.uid, selectedProfissionalId, dates, { isOpen, slots });
       // Refresh overrides
-      const data = await getAvailabilityOverrides(user.uid, format(currentMonth, 'yyyy-MM'));
+      const data = await getAvailabilityOverrides(user.uid, selectedProfissionalId, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
       setMessage({ type: 'success', text: `${dates.length} dias atualizados com sucesso!` });
       setTimeout(() => setMessage(null), 3000);
@@ -135,13 +164,13 @@ export default function BusinessHoursPage() {
 
   const handleSave = async () => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || !selectedProfissionalId) return;
 
     setSaving(true);
     setMessage(null);
 
     try {
-      await saveBusinessHours(user.uid, hours);
+      await saveBusinessHours(user.uid, selectedProfissionalId, hours);
       setMessage({ type: 'success', text: 'Horários salvos com sucesso!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
@@ -233,35 +262,93 @@ export default function BusinessHoursPage() {
     );
   }
 
+  if (profissionais.length === 0) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-8 pb-20">
+        <header>
+          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Disponibilidade</h1>
+          <p className="text-zinc-500 mt-1">Gerencie seus horários padrão e exceções no calendário.</p>
+        </header>
+        <div className="bg-white rounded-3xl border border-zinc-200 p-12 text-center space-y-4">
+          <div className="w-20 h-20 bg-zinc-50 rounded-full flex items-center justify-center mx-auto">
+            <Users className="w-10 h-10 text-zinc-300" />
+          </div>
+          <h3 className="text-xl font-bold text-zinc-900">Nenhum Profissional Cadastrado</h3>
+          <p className="text-zinc-500 max-w-md mx-auto">
+            Você precisa cadastrar pelo menos um profissional antes de configurar os horários de atendimento.
+          </p>
+          <button 
+            onClick={() => window.location.href = '/dashboard/profissionais'}
+            className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+          >
+            Cadastrar Profissional
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Disponibilidade</h1>
-          <p className="text-zinc-500 mt-1">Gerencie seus horários padrão e exceções no calendário.</p>
+        <div className="flex items-center gap-6">
+          <div>
+            <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Disponibilidade</h1>
+            <p className="text-zinc-500 mt-1">Gerencie seus horários padrão e exceções no calendário.</p>
+          </div>
+          
+          <div className="h-12 w-px bg-zinc-200 hidden lg:block" />
+          
+          <div className="hidden lg:block">
+            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional</label>
+            <select
+              value={selectedProfissionalId}
+              onChange={(e) => setSelectedProfissionalId(e.target.value)}
+              className="bg-white border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 pl-3 pr-10 shadow-sm"
+            >
+              {profissionais.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         
-        <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
-          <button
-            onClick={() => setActiveTab('calendar')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all",
-              activeTab === 'calendar' ? "bg-white text-emerald-600 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
-            )}
-          >
-            <CalendarDays className="w-4 h-4" />
-            Calendário
-          </button>
-          <button
-            onClick={() => setActiveTab('standard')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all",
-              activeTab === 'standard' ? "bg-white text-emerald-600 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
-            )}
-          >
-            <Settings className="w-4 h-4" />
-            Horário Padrão
-          </button>
+        <div className="flex flex-col gap-4">
+          <div className="lg:hidden">
+            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional</label>
+            <select
+              value={selectedProfissionalId}
+              onChange={(e) => setSelectedProfissionalId(e.target.value)}
+              className="w-full bg-white border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 pl-3 pr-10 shadow-sm"
+            >
+              {profissionais.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+            <button
+              onClick={() => setActiveTab('calendar')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all",
+                activeTab === 'calendar' ? "bg-white text-emerald-600 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+              )}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Calendário
+            </button>
+            <button
+              onClick={() => setActiveTab('standard')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all",
+                activeTab === 'standard' ? "bg-white text-emerald-600 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+              )}
+            >
+              <Settings className="w-4 h-4" />
+              Horário Padrão
+            </button>
+          </div>
         </div>
       </header>
 

@@ -86,12 +86,15 @@ export interface Profissional {
   avatarUrl?: string;
   specialties?: string[]; // IDs of services or just strings
   isActive: boolean;
+  commissionType: 'percentage' | 'fixed';
+  commissionValue: number;
   createdAt: number;
 }
 
 export interface Bloqueio {
   id: string;
   empresaId: string;
+  profissionalId: string;
   startTime: number;
   endTime: number;
   reason: string;
@@ -108,6 +111,7 @@ export interface AvailabilitySlot {
 export interface AvailabilityOverride {
   id: string;
   empresaId: string;
+  profissionalId: string;
   date: string; // YYYY-MM-DD
   isOpen: boolean;
   slots: AvailabilitySlot[];

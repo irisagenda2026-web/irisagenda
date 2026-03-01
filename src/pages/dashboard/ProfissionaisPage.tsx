@@ -13,7 +13,8 @@ import {
   AlertCircle,
   X,
   ShieldCheck,
-  UserPlus
+  UserPlus,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfissionais, addProfissional, updateProfissional, deleteProfissional, getEmpresa } from '../../services/db';
@@ -34,7 +35,9 @@ export default function ProfissionaisPage() {
     email: '',
     phone: '',
     bio: '',
-    isActive: true
+    isActive: true,
+    commissionType: 'percentage' as 'percentage' | 'fixed',
+    commissionValue: 0
   });
 
   const planLimit = empresa ? PLAN_LIMITS[empresa.plan]?.maxProfessionals || 1 : 1;
@@ -82,7 +85,15 @@ export default function ProfissionaisPage() {
       }
       setIsModalOpen(false);
       setEditingProfissional(null);
-      setFormData({ name: '', email: '', phone: '', bio: '', isActive: true });
+      setFormData({ 
+        name: '', 
+        email: '', 
+        phone: '', 
+        bio: '', 
+        isActive: true,
+        commissionType: 'percentage',
+        commissionValue: 0
+      });
       loadData();
     } catch (error) {
       console.error('Erro ao salvar profissional:', error);
@@ -121,7 +132,15 @@ export default function ProfissionaisPage() {
         <button
           onClick={() => {
             setEditingProfissional(null);
-            setFormData({ name: '', email: '', phone: '', bio: '', isActive: true });
+            setFormData({ 
+              name: '', 
+              email: '', 
+              phone: '', 
+              bio: '', 
+              isActive: true,
+              commissionType: 'percentage',
+              commissionValue: 0
+            });
             setIsModalOpen(true);
           }}
           disabled={isAtLimit && !editingProfissional}
@@ -212,7 +231,9 @@ export default function ProfissionaisPage() {
                         email: prof.email || '',
                         phone: prof.phone || '',
                         bio: prof.bio || '',
-                        isActive: prof.isActive
+                        isActive: prof.isActive,
+                        commissionType: prof.commissionType || 'percentage',
+                        commissionValue: prof.commissionValue || 0
                       });
                       setIsModalOpen(true);
                     }}
@@ -343,6 +364,36 @@ export default function ProfissionaisPage() {
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
                     placeholder="Breve descrição do profissional..."
                   />
+                </div>
+
+                <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 space-y-4">
+                  <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                    Configuração de Comissão
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tipo</label>
+                      <select
+                        value={formData.commissionType}
+                        onChange={(e) => setFormData({ ...formData, commissionType: e.target.value as any })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                      >
+                        <option value="percentage">Porcentagem (%)</option>
+                        <option value="fixed">Valor Fixo (R$)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Valor</label>
+                      <input
+                        type="number"
+                        value={formData.commissionValue}
+                        onChange={(e) => setFormData({ ...formData, commissionValue: parseFloat(e.target.value) })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">

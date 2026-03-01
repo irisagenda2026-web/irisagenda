@@ -45,12 +45,14 @@ export default function CalendarView() {
       const end = new Date(selectedDate);
       end.setHours(23, 59, 59, 999);
 
+      const profId = filterProfissional === 'all' ? null : filterProfissional;
+
       const [agData, blData, svData, profData, bhData] = await Promise.all([
         getAgendamentos(user.uid, start.getTime(), end.getTime()),
-        getBloqueios(user.uid, start.getTime(), end.getTime()),
+        getBloqueios(user.uid, profId, start.getTime(), end.getTime()),
         getServicos(user.uid),
         getProfissionais(user.uid),
-        getBusinessHours(user.uid)
+        getBusinessHours(user.uid, profId || 'default') // Fallback to default if all
       ]);
       setAgendamentos(agData);
       setBloqueios(blData);
@@ -63,7 +65,7 @@ export default function CalendarView() {
 
   useEffect(() => {
     loadData();
-  }, [selectedDate]);
+  }, [selectedDate, filterProfissional]);
 
   const handleDeleteBloqueio = async (id: string) => {
     if (confirm('Deseja remover este bloqueio?')) {
@@ -527,6 +529,7 @@ export default function CalendarView() {
           <NewBlockModal 
             onClose={() => setIsBlockModalOpen(false)} 
             selectedDate={selectedDate}
+            profissionais={profissionais}
             onSuccess={loadData}
           />
         )}
@@ -689,10 +692,11 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
   );
 }
 
-function NewBlockModal({ onClose, selectedDate, onSuccess }: any) {
+function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     reason: '',
+    profissionalId: profissionais.length > 0 ? profissionais[0].id : '',
     startHour: '12:00',
     endHour: '13:00'
   });
@@ -700,7 +704,7 @@ function NewBlockModal({ onClose, selectedDate, onSuccess }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || !formData.profissionalId) return;
 
     setLoading(true);
     try {
@@ -715,6 +719,7 @@ function NewBlockModal({ onClose, selectedDate, onSuccess }: any) {
 
       await createBloqueio({
         empresaId: user.uid,
+        profissionalId: formData.profissionalId,
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         reason: formData.reason
@@ -749,6 +754,20 @@ function NewBlockModal({ onClose, selectedDate, onSuccess }: any) {
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-zinc-700">Profissional</label>
+            <select 
+              required
+              value={formData.profissionalId}
+              onChange={e => setFormData({...formData, profissionalId: e.target.value})}
+              className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+            >
+              {profissionais.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-semibold text-zinc-700">Motivo (Ex: Almoço, Reunião)</label>
             <input 
