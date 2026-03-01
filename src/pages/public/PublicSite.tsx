@@ -169,6 +169,10 @@ export default function PublicSite() {
       
       const endTime = new Date(startTime.getTime() + selectedService.durationMinutes * 60000);
 
+      const commissionAmount = selectedService.commissionType === 'percentage' 
+        ? (selectedService.price * (selectedService.commissionValue || 0)) / 100 
+        : (selectedService.commissionValue || 0);
+
       await createAgendamento({
         empresaId: empresa.id,
         clienteId: 'public-guest',
@@ -180,7 +184,10 @@ export default function PublicSite() {
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'pending',
-        totalPrice: selectedService.price
+        totalPrice: selectedService.price,
+        commissionType: selectedService.commissionType,
+        commissionValue: selectedService.commissionValue,
+        commissionAmount
       });
 
       // WhatsApp Notification Trigger (Simulated)

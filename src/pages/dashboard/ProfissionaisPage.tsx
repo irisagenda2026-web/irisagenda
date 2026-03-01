@@ -35,10 +35,9 @@ export default function ProfissionaisPage() {
     email: '',
     phone: '',
     bio: '',
-    isActive: true,
-    commissionType: 'percentage' as 'percentage' | 'fixed',
-    commissionValue: 0
+    isActive: true
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   const planLimit = empresa ? PLAN_LIMITS[empresa.plan]?.maxProfessionals || 1 : 1;
   const isAtLimit = profissionais.length >= planLimit;
@@ -67,14 +66,19 @@ export default function ProfissionaisPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.empresaId) return;
+    if (!user?.empresaId) {
+      alert('Erro: ID da empresa não encontrado. Tente sair e entrar novamente.');
+      return;
+    }
 
+    setIsSaving(true);
     try {
       if (editingProfissional) {
         await updateProfissional(editingProfissional.id, formData);
       } else {
         if (isAtLimit) {
           alert(`Seu plano ${empresa?.plan.toUpperCase()} permite apenas ${planLimit} profissional(is). Faça upgrade para adicionar mais.`);
+          setIsSaving(false);
           return;
         }
         await addProfissional({
@@ -90,13 +94,14 @@ export default function ProfissionaisPage() {
         email: '', 
         phone: '', 
         bio: '', 
-        isActive: true,
-        commissionType: 'percentage',
-        commissionValue: 0
+        isActive: true
       });
       loadData();
     } catch (error) {
       console.error('Erro ao salvar profissional:', error);
+      alert('Erro ao salvar profissional. Verifique os campos e tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -137,9 +142,7 @@ export default function ProfissionaisPage() {
               email: '', 
               phone: '', 
               bio: '', 
-              isActive: true,
-              commissionType: 'percentage',
-              commissionValue: 0
+              isActive: true
             });
             setIsModalOpen(true);
           }}
@@ -231,9 +234,7 @@ export default function ProfissionaisPage() {
                         email: prof.email || '',
                         phone: prof.phone || '',
                         bio: prof.bio || '',
-                        isActive: prof.isActive,
-                        commissionType: prof.commissionType || 'percentage',
-                        commissionValue: prof.commissionValue || 0
+                        isActive: prof.isActive
                       });
                       setIsModalOpen(true);
                     }}
@@ -366,36 +367,6 @@ export default function ProfissionaisPage() {
                   />
                 </div>
 
-                <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 space-y-4">
-                  <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-emerald-600" />
-                    Configuração de Comissão
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tipo</label>
-                      <select
-                        value={formData.commissionType}
-                        onChange={(e) => setFormData({ ...formData, commissionType: e.target.value as any })}
-                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                      >
-                        <option value="percentage">Porcentagem (%)</option>
-                        <option value="fixed">Valor Fixo (R$)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Valor</label>
-                      <input
-                        type="number"
-                        value={formData.commissionValue}
-                        onChange={(e) => setFormData({ ...formData, commissionValue: parseFloat(e.target.value) })}
-                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -417,9 +388,10 @@ export default function ProfissionaisPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+                    disabled={isSaving}
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
                   >
-                    {editingProfissional ? 'Salvar Alterações' : 'Cadastrar'}
+                    {isSaving ? 'Salvando...' : (editingProfissional ? 'Salvar Alterações' : 'Cadastrar')}
                   </button>
                 </div>
               </form>

@@ -22,7 +22,9 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
     durationMinutes: 30,
     category: '',
     isActive: true,
-    imageUrl: ''
+    imageUrl: '',
+    commissionType: 'percentage',
+    commissionValue: 0
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -39,7 +41,9 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
         durationMinutes: 30,
         category: '',
         isActive: true,
-        imageUrl: ''
+        imageUrl: '',
+        commissionType: 'percentage',
+        commissionValue: 0
       });
     }
   }, [initialData, isOpen]);
@@ -209,6 +213,36 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
                   placeholder="Descreva os detalhes do serviço..."
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none"
                 />
+              </div>
+
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 space-y-4">
+                <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  Configuração de Comissão
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tipo</label>
+                    <select
+                      value={formData.commissionType}
+                      onChange={(e) => setFormData({ ...formData, commissionType: e.target.value as any })}
+                      className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                    >
+                      <option value="percentage">Porcentagem (%)</option>
+                      <option value="fixed">Valor Fixo (R$)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Valor</label>
+                    <input
+                      type="number"
+                      value={formData.commissionValue}
+                      onChange={(e) => setFormData({ ...formData, commissionValue: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
               </div>
             </form>
 

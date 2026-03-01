@@ -571,6 +571,10 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
       
       const endTime = new Date(startTime.getTime() + (servico.durationMinutes * 60000));
 
+      const commissionAmount = servico.commissionType === 'percentage' 
+        ? (servico.price * (servico.commissionValue || 0)) / 100 
+        : (servico.commissionValue || 0);
+
       await createAgendamento({
         empresaId: user.uid,
         clienteId: 'guest',
@@ -582,7 +586,10 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'confirmed',
-        totalPrice: servico.price
+        totalPrice: servico.price,
+        commissionType: servico.commissionType,
+        commissionValue: servico.commissionValue,
+        commissionAmount
       });
       
       onSuccess();
@@ -823,7 +830,9 @@ function ServicesModal({ onClose, servicos, onSuccess }: any) {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    durationMinutes: '60'
+    durationMinutes: '60',
+    commissionType: 'percentage' as 'percentage' | 'fixed',
+    commissionValue: '0'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -839,11 +848,13 @@ function ServicesModal({ onClose, servicos, onSuccess }: any) {
         description: '',
         price: Number(formData.price),
         durationMinutes: Number(formData.durationMinutes),
-        isActive: true
+        isActive: true,
+        commissionType: formData.commissionType,
+        commissionValue: Number(formData.commissionValue)
       });
       
       setIsAdding(false);
-      setFormData({ name: '', price: '', durationMinutes: '60' });
+      setFormData({ name: '', price: '', durationMinutes: '60', commissionType: 'percentage', commissionValue: '0' });
       onSuccess();
     } catch (error) {
       console.error(error);
@@ -913,6 +924,37 @@ function ServicesModal({ onClose, servicos, onSuccess }: any) {
                   />
                 </div>
               </div>
+
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 space-y-4 mb-4">
+                <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  Configuração de Comissão
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tipo</label>
+                    <select
+                      value={formData.commissionType}
+                      onChange={(e) => setFormData({ ...formData, commissionType: e.target.value as any })}
+                      className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                    >
+                      <option value="percentage">Porcentagem (%)</option>
+                      <option value="fixed">Valor Fixo (R$)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Valor</label>
+                    <input
+                      type="number"
+                      value={formData.commissionValue}
+                      onChange={(e) => setFormData({ ...formData, commissionValue: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button 
                   type="button"

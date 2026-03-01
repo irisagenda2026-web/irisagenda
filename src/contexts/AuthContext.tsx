@@ -31,7 +31,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           if (userDoc.exists()) {
             const userData = userDoc.data() as User;
-            setUser({ ...userData, id: firebaseUser.uid });
+            let finalUser = { ...userData, id: firebaseUser.uid };
+            
+            // Migration: Ensure empresaId is set for owners
+            if (userData.role === 'empresa' && !userData.empresaId) {
+              finalUser.empresaId = firebaseUser.uid;
+              await setDoc(doc(db, 'users', firebaseUser.uid), finalUser, { merge: true });
+            }
+            
+            setUser(finalUser);
             setRoleState(userData.role);
           } else {
             // Default role for new users if not set
@@ -41,7 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: firebaseUser.uid,
               name: isFirstAdmin ? 'Administrador Geral' : (firebaseUser.displayName || 'Usuário'),
               email: firebaseUser.email || '',
-              role: isFirstAdmin ? 'admin' : 'empresa' // Defaulting to empresa for this demo
+              role: isFirstAdmin ? 'admin' : 'empresa', // Defaulting to empresa for this demo
+              empresaId: isFirstAdmin ? undefined : firebaseUser.uid
             };
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
             setUser(newUser);

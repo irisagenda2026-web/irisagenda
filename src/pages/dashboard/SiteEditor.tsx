@@ -402,7 +402,9 @@ function ServicesForm({ empresaId, onCorsError }: { empresaId?: string, onCorsEr
         description: data.description || '',
         category: data.category || 'Geral',
         isActive: true,
-        imageUrl: data.imageUrl || ''
+        imageUrl: data.imageUrl || '',
+        commissionType: data.commissionType,
+        commissionValue: data.commissionValue
       });
     }
     await loadServices();

@@ -47,6 +47,8 @@ export interface Servico {
   isActive: boolean;
   category?: string;
   imageUrl?: string;
+  commissionType?: 'percentage' | 'fixed';
+  commissionValue?: number;
 }
 
 export interface Agendamento {
@@ -62,6 +64,9 @@ export interface Agendamento {
   endTime: number; // timestamp
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   totalPrice: number;
+  commissionType?: 'percentage' | 'fixed';
+  commissionValue?: number;
+  commissionAmount?: number; // Calculated amount for this specific booking
   notes?: string;
   createdAt: number;
 }
@@ -86,8 +91,6 @@ export interface Profissional {
   avatarUrl?: string;
   specialties?: string[]; // IDs of services or just strings
   isActive: boolean;
-  commissionType: 'percentage' | 'fixed';
-  commissionValue: number;
   createdAt: number;
 }
 
