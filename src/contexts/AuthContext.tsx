@@ -25,16 +25,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFirestoreError(null);
       
       if (firebaseUser) {
+        console.log("Auth state changed: User logged in", firebaseUser.uid);
         try {
           // Try to get user role from Firestore
+          console.log("Fetching user doc from Firestore...");
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           
           if (userDoc.exists()) {
+            console.log("User doc found:", userDoc.data());
             const userData = userDoc.data() as User;
             let finalUser = { ...userData, id: firebaseUser.uid };
             
             // Migration: Ensure empresaId is set for owners
             if (userData.role === 'empresa' && !userData.empresaId) {
+              console.log("Migrating user: adding empresaId");
               finalUser.empresaId = firebaseUser.uid;
               await setDoc(doc(db, 'users', firebaseUser.uid), finalUser, { merge: true });
             }
@@ -42,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(finalUser);
             setRoleState(userData.role);
           } else {
+            console.log("User doc NOT found, creating default...");
             // Default role for new users if not set
             // For testing purposes, if the email is admin@irisagenda.com, make them an admin
             const isFirstAdmin = firebaseUser.email === 'admin@irisagenda.com';
@@ -57,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setRoleState(newUser.role);
           }
         } catch (error: any) {
-          console.error("Firestore Error:", error);
+          console.error("Firestore Error in AuthContext:", error);
           if (error.code === 'permission-denied') {
              setFirestoreError("Acesso Negado. O banco de dados não permite leitura. Verifique as Regras de Segurança no Firebase Console.");
           } else if (error.message && error.message.includes("offline")) {
@@ -67,10 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } else {
+        console.log("Auth state changed: User logged out");
         setUser(null);
         setRoleState('guest');
       }
       setIsLoading(false);
+      console.log("AuthContext loading finished");
     });
 
     return () => unsubscribe();

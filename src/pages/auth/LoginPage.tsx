@@ -27,15 +27,50 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
+    // Add a safety timeout
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+        setError('A conexão está demorando mais que o esperado. Verifique sua internet e tente novamente.');
+      }
+    }, 15000);
+
     try {
+      console.log("Attempting login for:", email);
       await signInWithEmailAndPassword(auth, email, password);
+      console.log("Login successful");
+      clearTimeout(timeoutId);
       // AuthContext will handle the redirect via useEffect
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/configuration-not-found' || err.code === 'auth/admin-restricted-operation') {
-        setError('Erro de configuração: Habilite o "Email/Senha" no Firebase Console -> Authentication -> Sign-in method.');
-      } else {
-        setError('E-mail ou senha incorretos. Verifique se você já criou uma conta.');
+      clearTimeout(timeoutId);
+      console.error("Login Error Details:", err);
+      
+      switch (err.code) {
+        case 'auth/user-not-found':
+          setError('Usuário não encontrado. Verifique o e-mail ou crie uma conta.');
+          break;
+        case 'auth/wrong-password':
+          setError('Senha incorreta. Tente novamente ou recupere sua senha.');
+          break;
+        case 'auth/invalid-email':
+          setError('E-mail inválido. Verifique o formato digitado.');
+          break;
+        case 'auth/user-disabled':
+          setError('Esta conta foi desativada. Entre em contato com o suporte.');
+          break;
+        case 'auth/too-many-requests':
+          setError('Muitas tentativas malsucedidas. Tente novamente mais tarde.');
+          break;
+        case 'auth/configuration-not-found':
+        case 'auth/admin-restricted-operation':
+        case 'auth/operation-not-allowed':
+          setError('Erro de configuração no servidor. Por favor, tente mais tarde.');
+          break;
+        case 'auth/network-request-failed':
+          setError('Erro de rede. Verifique sua conexão com a internet.');
+          break;
+        default:
+          setError('Erro ao entrar. Verifique seus dados ou tente criar uma nova conta.');
       }
     } finally {
       setIsLoading(false);
