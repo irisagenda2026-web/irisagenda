@@ -55,8 +55,8 @@ export default function AdminDashboard() {
       
       setStats({
         totalClinics: clinicsData.length,
-        activeSubscriptions: clinicsData.filter(c => c.plan !== 'basic').length,
-        monthlyRevenue: clinicsData.reduce((acc, c) => acc + (c.plan === 'pro' ? 199 : c.plan === 'enterprise' ? 499 : 0), 0),
+        activeSubscriptions: clinicsData.filter(c => c.plan !== 'essencial').length,
+        monthlyRevenue: clinicsData.reduce((acc, c) => acc + (c.plan === 'profissional' ? 159 : c.plan === 'enterprise' ? 499 : 0), 0),
         newClinicsToday: clinicsData.filter(c => new Date(c.createdAt).toDateString() === new Date().toDateString()).length
       });
     } catch (err) {
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
                         <span className={cn(
                           "px-2 py-1 rounded-lg text-[10px] font-bold uppercase",
                           clinic.plan === 'enterprise' ? "bg-purple-100 text-purple-700" :
-                          clinic.plan === 'pro' ? "bg-blue-100 text-blue-700" : "bg-zinc-100 text-zinc-700"
+                          clinic.plan === 'profissional' ? "bg-blue-100 text-blue-700" : "bg-zinc-100 text-zinc-700"
                         )}>
                           {clinic.plan}
                         </span>

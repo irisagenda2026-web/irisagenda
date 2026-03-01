@@ -1,10 +1,10 @@
 export const PLAN_LIMITS = {
-  basic: {
+  essencial: {
     maxProfessionals: 2,
     maxServices: 10,
     features: ['Agendamento Online', 'Dashboard Básico'],
   },
-  pro: {
+  profissional: {
     maxProfessionals: 5,
     maxServices: 50,
     features: ['Agendamento Online', 'Dashboard Avançado', 'Gestão de Clientes', 'Relatórios Financeiros'],

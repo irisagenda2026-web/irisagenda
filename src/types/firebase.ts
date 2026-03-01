@@ -27,7 +27,7 @@ export interface Empresa {
   whatsapp: string;
   category: 'beauty' | 'aesthetics' | 'health';
   ownerId: string;
-  plan: 'basic' | 'pro' | 'enterprise';
+  plan: 'essencial' | 'profissional' | 'enterprise';
   settings: {
     primaryColor: string;
     secondaryColor: string;

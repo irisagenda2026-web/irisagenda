@@ -42,7 +42,7 @@ export default function SignupPage() {
         whatsapp: '',
         category: 'beauty',
         ownerId: user.uid,
-        plan: (planName.toLowerCase() as any) || 'basic',
+        plan: (planName.toLowerCase() as any) || 'essencial',
         settings: {
           primaryColor: '#059669',
           secondaryColor: '#10b981',
