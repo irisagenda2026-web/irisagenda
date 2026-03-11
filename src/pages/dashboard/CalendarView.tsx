@@ -9,7 +9,8 @@ import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
 import { 
   getAgendamentos, createAgendamento, getServicos, addServico, 
-  getBloqueios, createBloqueio, deleteBloqueio, getProfissionais, getBusinessHours 
+  getBloqueios, createBloqueio, deleteBloqueio, getProfissionais, getBusinessHours,
+  updateAgendamentoStatus
 } from '@/src/services/db';
 import { Agendamento, Servico, Bloqueio, Profissional } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -510,19 +511,47 @@ export default function CalendarView() {
                             <div className="flex flex-col items-end gap-1">
                               <div className={cn(
                                 "px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2",
-                                ag.status === 'confirmed' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-zinc-50 text-zinc-600 border border-zinc-100"
+                                ag.status === 'completed' ? "bg-emerald-600 text-white" :
+                                ag.status === 'confirmed' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : 
+                                "bg-zinc-50 text-zinc-600 border border-zinc-100"
                               )}>
                                 <Check size={14} />
-                                {ag.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+                                {ag.status === 'completed' ? 'Concluído' :
+                                 ag.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
                               </div>
                               <div className="flex items-center gap-1 text-red-500 font-bold text-[10px] mt-1">
                                 <DollarSign size={10} />
-                                A pagar: R$ {ag.totalPrice.toFixed(2)}
+                                {ag.status === 'completed' ? 'Pago: ' : 'A pagar: '} R$ {ag.totalPrice.toFixed(2)}
                               </div>
                             </div>
-                            <button className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-400 transition-colors">
-                              <X size={18} />
-                            </button>
+                            <div className="flex gap-2">
+                              {ag.status !== 'completed' && (
+                                <button 
+                                  onClick={async () => {
+                                    if (confirm('Deseja marcar este agendamento como concluído?')) {
+                                      await updateAgendamentoStatus(ag.id, 'completed');
+                                      loadData();
+                                    }
+                                  }}
+                                  className="p-2 hover:bg-emerald-50 rounded-xl text-emerald-600 transition-colors"
+                                  title="Concluir Agendamento"
+                                >
+                                  <Check size={18} />
+                                </button>
+                              )}
+                              <button 
+                                onClick={async () => {
+                                  if (confirm('Deseja cancelar este agendamento?')) {
+                                    await updateAgendamentoStatus(ag.id, 'cancelled');
+                                    loadData();
+                                  }
+                                }}
+                                className="p-2 hover:bg-red-50 rounded-xl text-red-400 transition-colors"
+                                title="Cancelar Agendamento"
+                              >
+                                <X size={18} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </motion.div>
@@ -685,9 +714,13 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         return;
       }
 
-      const commissionAmount = servico.commissionType === 'percentage' 
-        ? (servico.price * (servico.commissionValue || 0)) / 100 
-        : (servico.commissionValue || 0);
+      const profComm = servico.professionalCommissions?.[formData.profissionalId];
+      const commType = profComm?.type || servico.commissionType || 'percentage';
+      const commValue = profComm?.value ?? servico.commissionValue ?? 0;
+
+      const commissionAmount = commType === 'percentage' 
+        ? (servico.price * commValue) / 100 
+        : commValue;
 
       await createAgendamento({
         empresaId: authUser.empresaId,
@@ -701,8 +734,8 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         endTime: endTime.getTime(),
         status: 'confirmed',
         totalPrice: servico.price,
-        commissionType: servico.commissionType,
-        commissionValue: servico.commissionValue,
+        commissionType: commType,
+        commissionValue: commValue,
         commissionAmount
       });
       
@@ -1020,7 +1053,8 @@ function ServicesModal({ onClose, servicos, onSuccess }: any) {
         durationMinutes: Number(formData.durationMinutes),
         isActive: true,
         commissionType: formData.commissionType,
-        commissionValue: Number(formData.commissionValue)
+        commissionValue: Number(formData.commissionValue),
+        professionalCommissions: {}
       });
       
       setIsAdding(false);

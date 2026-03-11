@@ -50,6 +50,7 @@ export interface Servico {
   commissionType?: 'percentage' | 'fixed';
   commissionValue?: number;
   professionalIds?: string[]; // IDs of professionals who can perform this service
+  professionalCommissions?: Record<string, { type: 'percentage' | 'fixed', value: number }>;
 }
 
 export interface Agendamento {

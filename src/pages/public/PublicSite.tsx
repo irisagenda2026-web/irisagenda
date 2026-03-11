@@ -155,9 +155,13 @@ export default function PublicSite() {
         return;
       }
 
-      const commissionAmount = selectedService.commissionType === 'percentage' 
-        ? (selectedService.price * (selectedService.commissionValue || 0)) / 100 
-        : (selectedService.commissionValue || 0);
+      const profComm = selectedService.professionalCommissions?.[profId];
+      const commType = profComm?.type || selectedService.commissionType || 'percentage';
+      const commValue = profComm?.value ?? selectedService.commissionValue ?? 0;
+
+      const commissionAmount = commType === 'percentage' 
+        ? (selectedService.price * commValue) / 100 
+        : commValue;
 
       await createAgendamento({
         empresaId: empresa.id,
@@ -171,8 +175,8 @@ export default function PublicSite() {
         endTime: endTime.getTime(),
         status: 'pending',
         totalPrice: selectedService.price,
-        commissionType: selectedService.commissionType,
-        commissionValue: selectedService.commissionValue,
+        commissionType: commType,
+        commissionValue: commValue,
         commissionAmount
       });
 

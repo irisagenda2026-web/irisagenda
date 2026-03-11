@@ -25,7 +25,7 @@ import {
   Area
 } from 'recharts';
 import { auth } from '@/src/services/firebase';
-import { getAllAgendamentos } from '@/src/services/db';
+import { getAllAgendamentos, getProfissionais } from '@/src/services/db';
 import { Agendamento } from '@/src/types/firebase';
 import { cn } from '@/src/utils/cn';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -40,12 +40,23 @@ export default function FinanceDashboard() {
     const loadData = async () => {
       if (user?.empresaId) {
         const data = await getAllAgendamentos(user.empresaId);
-        setAgendamentos(data);
+        if (role === 'profissional') {
+          // Find the professional record for this user
+          const profs = await getProfissionais(user.empresaId);
+          const myProf = profs.find(p => p.userId === auth.currentUser?.uid);
+          if (myProf) {
+            setAgendamentos(data.filter(a => a.profissionalId === myProf.id));
+          } else {
+            setAgendamentos([]);
+          }
+        } else {
+          setAgendamentos(data);
+        }
       }
       setIsLoading(false);
     };
     loadData();
-  }, [user?.empresaId]);
+  }, [user?.empresaId, role]);
 
   const stats = {
     totalRevenue: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? curr.totalPrice : 0), 0),
@@ -70,14 +81,7 @@ export default function FinanceDashboard() {
 
   if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-emerald-600" /></div>;
 
-  if (role !== 'empresa' && role !== 'admin') {
-    return (
-      <div className="p-20 text-center">
-        <h1 className="text-2xl font-bold text-zinc-900 mb-4">Acesso Restrito</h1>
-        <p className="text-zinc-500">Apenas proprietários de clínicas podem acessar o painel financeiro.</p>
-      </div>
-    );
-  }
+  const isProf = role === 'profissional';
 
   return (
     <div className="p-4 md:p-8 bg-zinc-50 min-h-screen pb-24 md:pb-8">
@@ -85,7 +89,11 @@ export default function FinanceDashboard() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Financeiro</h1>
-            <p className="text-zinc-500 mt-1">Acompanhe o desempenho e recebimentos da sua clínica.</p>
+            <p className="text-zinc-500 mt-1">
+              {isProf 
+                ? 'Acompanhe seus ganhos e comissões.' 
+                : 'Acompanhe o desempenho e recebimentos da sua clínica.'}
+            </p>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
             <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-zinc-200 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-zinc-50 transition-all shadow-sm">
@@ -105,7 +113,9 @@ export default function FinanceDashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full -mr-8 -mt-8" />
             <div className="flex flex-col h-full justify-between">
               <div className="flex justify-between items-center mb-4">
-                <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Saldo disponível</p>
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                  {isProf ? 'Meu Saldo Disponível' : 'Saldo disponível'}
+                </p>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setShowBalance(!showBalance)}
@@ -120,7 +130,9 @@ export default function FinanceDashboard() {
               </div>
               <div>
                 <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">
-                  {showBalance ? `R$ ${stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '••••••'}
+                  {showBalance 
+                    ? `R$ ${(isProf ? stats.totalCommission : stats.totalRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
+                    : '••••••'}
                 </h2>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">Liberado para saque</span>
@@ -138,7 +150,7 @@ export default function FinanceDashboard() {
               trendUp={true} 
             />
             <StatCard 
-              label="Comissões" 
+              label={isProf ? "Ganhos Totais" : "Comissões"} 
               value={`R$ ${stats.totalCommission.toFixed(2)}`} 
               icon={Users} 
               trend="+12%" 
@@ -222,8 +234,12 @@ export default function FinanceDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-black text-zinc-900">R$ {ag.totalPrice.toFixed(2)}</p>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">Confirmado</span>
+                      <p className="text-sm font-black text-zinc-900">
+                        R$ {(isProf ? ag.commissionAmount || 0 : ag.totalPrice).toFixed(2)}
+                      </p>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
+                        {ag.status === 'completed' ? 'Concluído' : 'Confirmado'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-50 group-hover:border-zinc-100 transition-colors">

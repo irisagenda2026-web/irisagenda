@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
-import { getAgendamentos, getServicos, getProfissionais } from '@/src/services/db';
+import { getAgendamentos, getServicos, getProfissionais, getAllAgendamentos } from '@/src/services/db';
 import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -15,6 +15,7 @@ import { useAuth } from '@/src/contexts/AuthContext';
 export default function MainDashboard() {
   const { role, user: authUser } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [totalBalance, setTotalBalance] = useState(0);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentProfissional, setCurrentProfissional] = useState<Profissional | null>(null);
@@ -28,9 +29,10 @@ export default function MainDashboard() {
         const tonight = new Date();
         tonight.setHours(23,59,59,999);
 
-        const [agData, svData] = await Promise.all([
+        const [agData, svData, allAgData] = await Promise.all([
           getAgendamentos(authUser.empresaId, today.getTime(), tonight.getTime()),
-          getServicos(authUser.empresaId)
+          getServicos(authUser.empresaId),
+          role === 'profissional' ? getAllAgendamentos(authUser.empresaId) : Promise.resolve([])
         ]);
 
         let filteredAg = agData;
@@ -40,6 +42,11 @@ export default function MainDashboard() {
           if (myProf) {
             setCurrentProfissional(myProf);
             filteredAg = agData.filter(a => a.profissionalId === myProf.id);
+            
+            // Calculate total balance from all completed agendamentos
+            const myAllAg = allAgData.filter(a => a.profissionalId === myProf.id && a.status === 'completed');
+            const balance = myAllAg.reduce((acc, curr) => acc + (curr.commissionAmount || 0), 0);
+            setTotalBalance(balance);
           }
         }
 
@@ -53,18 +60,26 @@ export default function MainDashboard() {
 
   const stats = [
     { 
-      label: role === 'profissional' ? 'Minha Comissão' : 'Receita Hoje', 
+      label: role === 'profissional' ? 'Comissão Hoje' : 'Receita Hoje', 
       value: `R$ ${agendamentos.reduce((acc, curr) => {
         if (role === 'profissional') {
           return acc + (curr.commissionAmount || 0);
         }
         return acc + curr.totalPrice;
-      }, 0)}`, 
+      }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 
       icon: DollarSign, 
       color: 'text-emerald-600', 
       bg: 'bg-emerald-50' 
     },
-    { label: 'Agendamentos', value: agendamentos.length, icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { 
+      label: role === 'profissional' ? 'Saldo Total' : 'Agendamentos', 
+      value: role === 'profissional' 
+        ? `R$ ${totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : agendamentos.length, 
+      icon: role === 'profissional' ? TrendingUp : Calendar, 
+      color: role === 'profissional' ? 'text-blue-600' : 'text-blue-600', 
+      bg: role === 'profissional' ? 'bg-blue-50' : 'bg-blue-50' 
+    },
     { label: 'Novos Clientes', value: agendamentos.length > 0 ? Math.floor(agendamentos.length * 0.7) : 0, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Avaliação', value: '4.9', icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
