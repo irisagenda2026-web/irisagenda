@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Loader2, DollarSign, Clock, Tag, AlignLeft, Image as ImageIcon, Upload } from 'lucide-react';
-import { Servico } from '@/src/types/firebase';
+import { X, Save, Loader2, DollarSign, Clock, Tag, AlignLeft, Image as ImageIcon, Upload, Users } from 'lucide-react';
+import { Servico, Profissional } from '@/src/types/firebase';
 import { uploadImage } from '@/src/services/storage';
 import { compressImage } from '@/src/utils/image';
+import { getProfissionais } from '@/src/services/db';
+import { cn } from '@/src/utils/cn';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -25,11 +27,19 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
     isActive: true,
     imageUrl: '',
     commissionType: 'percentage',
-    commissionValue: 0
+    commissionValue: 0,
+    professionalIds: []
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (empresaId) {
+      getProfissionais(empresaId).then(setProfissionais);
+    }
+  }, [empresaId]);
 
   useEffect(() => {
     if (initialData) {
@@ -44,7 +54,8 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
         isActive: true,
         imageUrl: '',
         commissionType: 'percentage',
-        commissionValue: 0
+        commissionValue: 0,
+        professionalIds: []
       });
     }
   }, [initialData, isOpen]);
@@ -211,6 +222,45 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
                   placeholder="Descreva os detalhes do serviço..."
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+                  <Users size={14} /> Profissionais Qualificados
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {profissionais.map((prof) => (
+                    <button
+                      key={prof.id}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.professionalIds || [];
+                        if (current.includes(prof.id)) {
+                          setFormData({ ...formData, professionalIds: current.filter(id => id !== prof.id) });
+                        } else {
+                          setFormData({ ...formData, professionalIds: [...current, prof.id] });
+                        }
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all",
+                        formData.professionalIds?.includes(prof.id)
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                          : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold",
+                        formData.professionalIds?.includes(prof.id) ? "bg-emerald-600 text-white" : "bg-zinc-200 text-zinc-500"
+                      )}>
+                        {prof.name[0]}
+                      </div>
+                      <span className="text-xs font-medium truncate">{prof.name}</span>
+                    </button>
+                  ))}
+                </div>
+                {profissionais.length === 0 && (
+                  <p className="text-xs text-zinc-500 italic">Nenhum profissional cadastrado.</p>
+                )}
               </div>
 
               <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 space-y-4">

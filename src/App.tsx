@@ -76,6 +76,7 @@ function AppLayout() {
 
   const isAdmin = role === 'admin';
   const isEmpresa = role === 'empresa';
+  const isProfissional = role === 'profissional';
   const isCliente = role === 'cliente';
 
   return (
@@ -111,6 +112,14 @@ function AppLayout() {
                 <NavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
                 <NavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
+              </>
+            )}
+
+            {isProfissional && (
+              <>
+                <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" active={location.pathname === '/dashboard'} />
+                <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Minha Agenda" active={location.pathname === '/dashboard/calendar'} />
+                <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Meus Horários" active={location.pathname === '/dashboard/disponibilidade'} />
               </>
             )}
 
@@ -164,12 +173,33 @@ function AppLayout() {
             {/* Same links as desktop but stacked */}
             {isEmpresa && (
               <>
+                <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" />
                 <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Agenda" />
+                <NavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" />
+                <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Horários" />
+                <NavLink to="/dashboard/clientes" icon={Users} label="Clientes" />
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" />
-                <NavLink to="/dashboard/site" icon={LayoutDashboard} label="Meu Site" />
+                <NavLink to="/dashboard/site" icon={Settings} label="Site" />
               </>
             )}
-            {/* ... other roles ... */}
+            {isProfissional && (
+              <>
+                <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" />
+                <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Minha Agenda" />
+                <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Meus Horários" />
+              </>
+            )}
+            {isAdmin && (
+              <>
+                <NavLink to="/admin/dashboard" icon={ShieldCheck} label="Plataforma" />
+                <NavLink to="/admin/clinics" icon={Users} label="Clínicas" />
+              </>
+            )}
+            {isCliente && (
+              <>
+                <NavLink to="/my-appointments" icon={CalendarIcon} label="Meus Agendamentos" />
+              </>
+            )}
           </div>
         )}
       </nav>
@@ -178,14 +208,22 @@ function AppLayout() {
         <Outlet />
       </main>
 
-      {/* Mobile Bottom Navigation (Empresa Only) */}
-      {isEmpresa && (
+      {/* Mobile Bottom Navigation (Empresa and Profissional) */}
+      {(isEmpresa || isProfissional) && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-50 flex justify-around items-center pb-safe h-16">
           <BottomNavLink to="/dashboard" icon={LayoutDashboard} label="Início" active={location.pathname === '/dashboard'} />
           <BottomNavLink to="/dashboard/calendar" icon={CalendarIcon} label="Agenda" active={location.pathname === '/dashboard/calendar'} />
-          <BottomNavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" active={location.pathname === '/dashboard/profissionais'} />
-          <BottomNavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
-          <BottomNavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
+          {isEmpresa ? (
+            <>
+              <BottomNavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" active={location.pathname === '/dashboard/profissionais'} />
+              <BottomNavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
+              <BottomNavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
+            </>
+          ) : (
+            <>
+              <BottomNavLink to="/dashboard/disponibilidade" icon={Clock} label="Horários" active={location.pathname === '/dashboard/disponibilidade'} />
+            </>
+          )}
         </div>
       )}
       <SupportChat />

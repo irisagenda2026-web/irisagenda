@@ -29,6 +29,7 @@ import { cn } from '../../utils/cn';
 import AvailabilityCalendar from '../../components/dashboard/AvailabilityCalendar';
 import { AvailabilityOverride, AvailabilitySlot, Profissional } from '../../types/firebase';
 import { format } from 'date-fns';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 const DAYS_OF_WEEK = [
   { id: '0', label: 'Domingo' },
@@ -65,6 +66,7 @@ const DEFAULT_HOURS: BusinessHours = {
 };
 
 export default function BusinessHoursPage() {
+  const { role, user: authUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'standard' | 'calendar'>('calendar');
   const [hours, setHours] = useState<BusinessHours>(DEFAULT_HOURS);
   const [overrides, setOverrides] = useState<AvailabilityOverride[]>([]);
@@ -78,7 +80,7 @@ export default function BusinessHoursPage() {
 
   useEffect(() => {
     loadInitialData();
-  }, []);
+  }, [role, authUser]);
 
   useEffect(() => {
     if (selectedProfissionalIds.length > 0) {
@@ -87,13 +89,21 @@ export default function BusinessHoursPage() {
   }, [currentMonth, selectedProfissionalIds[0]]);
 
   const loadInitialData = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !authUser?.empresaId) return;
 
     try {
-      const profs = await getProfissionais(user.uid);
+      const profs = await getProfissionais(authUser.empresaId);
       setProfissionais(profs);
-      if (profs.length > 0) {
+      
+      if (role === 'profissional') {
+        const myProf = profs.find(p => p.userId === firebaseUser.uid);
+        if (myProf) {
+          setSelectedProfissionalIds([myProf.id]);
+        } else {
+          setLoading(false);
+        }
+      } else if (profs.length > 0) {
         setSelectedProfissionalIds([profs[0].id]);
       } else {
         setLoading(false);
@@ -105,14 +115,14 @@ export default function BusinessHoursPage() {
   };
 
   const loadData = async () => {
-    const user = auth.currentUser;
+    const firebaseUser = auth.currentUser;
     const primaryId = selectedProfissionalIds[0];
-    if (!user || !primaryId) return;
+    if (!firebaseUser || !authUser?.empresaId || !primaryId) return;
 
     try {
       const [hoursData, overridesData] = await Promise.all([
-        getBusinessHours(user.uid, primaryId),
-        getAvailabilityOverrides(user.uid, primaryId, format(currentMonth, 'yyyy-MM'))
+        getBusinessHours(authUser.empresaId, primaryId),
+        getAvailabilityOverrides(authUser.empresaId, primaryId, format(currentMonth, 'yyyy-MM'))
       ]);
 
       setHours(hoursData || DEFAULT_HOURS);
@@ -125,13 +135,13 @@ export default function BusinessHoursPage() {
   };
 
   const handleSaveOverride = async (date: string, isOpen: boolean, slots: AvailabilitySlot[]) => {
-    const user = auth.currentUser;
-    if (!user || selectedProfissionalIds.length === 0) return;
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !authUser?.empresaId || selectedProfissionalIds.length === 0) return;
 
     try {
       await Promise.all(selectedProfissionalIds.map(id => 
         saveAvailabilityOverride({
-          empresaId: user.uid,
+          empresaId: authUser.empresaId,
           profissionalId: id,
           date,
           isOpen,
@@ -141,7 +151,7 @@ export default function BusinessHoursPage() {
       
       // Refresh overrides for the primary view
       const primaryId = selectedProfissionalIds[0];
-      const data = await getAvailabilityOverrides(user.uid, primaryId, format(currentMonth, 'yyyy-MM'));
+      const data = await getAvailabilityOverrides(authUser.empresaId, primaryId, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
       setMessage({ type: 'success', text: `Disponibilidade atualizada para ${selectedProfissionalIds.length} profissional(is)!` });
       setTimeout(() => setMessage(null), 3000);
@@ -152,17 +162,17 @@ export default function BusinessHoursPage() {
   };
 
   const handleBulkSave = async (dates: string[], isOpen: boolean, slots: AvailabilitySlot[]) => {
-    const user = auth.currentUser;
-    if (!user || selectedProfissionalIds.length === 0) return;
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !authUser?.empresaId || selectedProfissionalIds.length === 0) return;
 
     try {
       await Promise.all(selectedProfissionalIds.map(id => 
-        bulkSaveAvailability(user.uid, id, dates, { isOpen, slots })
+        bulkSaveAvailability(authUser.empresaId, id, dates, { isOpen, slots })
       ));
       
       // Refresh overrides for the primary view
       const primaryId = selectedProfissionalIds[0];
-      const data = await getAvailabilityOverrides(user.uid, primaryId, format(currentMonth, 'yyyy-MM'));
+      const data = await getAvailabilityOverrides(authUser.empresaId, primaryId, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
       setMessage({ type: 'success', text: `${dates.length} dias atualizados para ${selectedProfissionalIds.length} profissional(is)!` });
       setTimeout(() => setMessage(null), 3000);
@@ -173,15 +183,15 @@ export default function BusinessHoursPage() {
   };
 
   const handleSave = async () => {
-    const user = auth.currentUser;
-    if (!user || selectedProfissionalIds.length === 0) return;
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !authUser?.empresaId || selectedProfissionalIds.length === 0) return;
 
     setSaving(true);
     setMessage(null);
 
     try {
       await Promise.all(selectedProfissionalIds.map(id => 
-        saveBusinessHours(user.uid, id, hours)
+        saveBusinessHours(authUser.empresaId, id, hours)
       ));
       setMessage({ type: 'success', text: `Horários salvos para ${selectedProfissionalIds.length} profissional(is)!` });
       setTimeout(() => setMessage(null), 3000);
@@ -315,7 +325,8 @@ export default function BusinessHoursPage() {
             <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional(is)</label>
             <button 
               onClick={() => setIsProfDropdownOpen(!isProfDropdownOpen)}
-              className="bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 px-4 shadow-sm flex items-center gap-2 min-w-[220px] justify-between"
+              disabled={role === 'profissional'}
+              className="bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 px-4 shadow-sm flex items-center gap-2 min-w-[220px] justify-between disabled:opacity-50"
             >
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-zinc-400" />
@@ -325,7 +336,7 @@ export default function BusinessHoursPage() {
                     : `${selectedProfissionalIds.length} selecionados`}
                 </span>
               </div>
-              <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isProfDropdownOpen && "rotate-90")} />
+              {role === 'empresa' && <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isProfDropdownOpen && "rotate-90")} />}
             </button>
             
             <AnimatePresence>
@@ -379,7 +390,8 @@ export default function BusinessHoursPage() {
             <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional(is)</label>
             <button 
               onClick={() => setIsProfDropdownOpen(!isProfDropdownOpen)}
-              className="w-full bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 px-4 shadow-sm flex items-center gap-2 justify-between"
+              disabled={role === 'profissional'}
+              className="w-full bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 px-4 shadow-sm flex items-center gap-2 justify-between disabled:opacity-50"
             >
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-zinc-400" />
@@ -389,7 +401,7 @@ export default function BusinessHoursPage() {
                     : `${selectedProfissionalIds.length} selecionados`}
                 </span>
               </div>
-              <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isProfDropdownOpen && "rotate-90")} />
+              {role === 'empresa' && <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isProfDropdownOpen && "rotate-90")} />}
             </button>
             
             <AnimatePresence>
@@ -481,7 +493,7 @@ export default function BusinessHoursPage() {
           overrides={overrides}
           onSaveOverride={handleSaveOverride}
           onBulkSave={handleBulkSave}
-          empresaId={auth.currentUser?.uid || ''}
+          empresaId={authUser?.empresaId || ''}
           currentMonth={currentMonth}
           onMonthChange={setCurrentMonth}
         />

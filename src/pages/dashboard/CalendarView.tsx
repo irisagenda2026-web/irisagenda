@@ -15,7 +15,7 @@ import { Agendamento, Servico, Bloqueio, Profissional } from '@/src/types/fireba
 import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function CalendarView() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [bloqueios, setBloqueios] = useState<Bloqueio[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -24,6 +24,7 @@ export default function CalendarView() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
+  const [currentProfissional, setCurrentProfissional] = useState<Profissional | null>(null);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('all');
@@ -38,22 +39,34 @@ export default function CalendarView() {
 
   const loadData = async () => {
     setIsLoading(true);
-    const user = auth.currentUser;
-    if (user) {
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser && user?.empresaId) {
       const start = new Date(selectedDate);
       start.setHours(0, 0, 0, 0);
       const end = new Date(selectedDate);
       end.setHours(23, 59, 59, 999);
 
-      const profId = filterProfissional === 'all' ? null : filterProfissional;
+      let profIdToFilter = filterProfissional === 'all' ? null : filterProfissional;
+      
+      // If user is a professional, they can ONLY see their own data
+      if (role === 'profissional') {
+        const profs = await getProfissionais(user.empresaId);
+        const myProf = profs.find(p => p.userId === firebaseUser.uid);
+        if (myProf) {
+          setCurrentProfissional(myProf);
+          profIdToFilter = myProf.id;
+          setFilterProfissional(myProf.id);
+        }
+      }
 
       const [agData, blData, svData, profData, bhData] = await Promise.all([
-        getAgendamentos(user.uid, start.getTime(), end.getTime()),
-        getBloqueios(user.uid, profId, start.getTime(), end.getTime()),
-        getServicos(user.uid),
-        getProfissionais(user.uid),
-        getBusinessHours(user.uid, profId || 'default') // Fallback to default if all
+        getAgendamentos(user.empresaId, start.getTime(), end.getTime()),
+        getBloqueios(user.empresaId, profIdToFilter, start.getTime(), end.getTime()),
+        getServicos(user.empresaId),
+        getProfissionais(user.empresaId),
+        getBusinessHours(user.empresaId, profIdToFilter || 'default')
       ]);
+      
       setAgendamentos(agData);
       setBloqueios(blData);
       setServicos(svData);
@@ -130,20 +143,24 @@ export default function CalendarView() {
             <p className="text-zinc-500 mt-1">Gerencie seus horários, serviços e disponibilidade.</p>
           </div>
           
-          {role === 'empresa' && (
+          {role === 'empresa' || role === 'profissional' && (
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <button 
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl font-bold hover:bg-amber-200 transition-all shadow-sm border border-amber-200"
-              >
-                Abrir meu Caixa
-              </button>
-              <button 
-                onClick={() => setIsServiceModalOpen(true)}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-zinc-200 text-zinc-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-zinc-50 transition-all shadow-sm"
-              >
-                <Scissors size={18} />
-                Serviços
-              </button>
+              {role === 'empresa' && (
+                <button 
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl font-bold hover:bg-amber-200 transition-all shadow-sm border border-amber-200"
+                >
+                  Abrir meu Caixa
+                </button>
+              )}
+              {role === 'empresa' && (
+                <button 
+                  onClick={() => setIsServiceModalOpen(true)}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-zinc-200 text-zinc-700 px-4 py-2.5 rounded-xl font-semibold hover:bg-zinc-50 transition-all shadow-sm"
+                >
+                  <Scissors size={18} />
+                  Serviços
+                </button>
+              )}
               <button 
                 onClick={() => setIsApptModalOpen(true)}
                 className="w-full md:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
@@ -205,7 +222,8 @@ export default function CalendarView() {
             <select 
               value={filterProfissional}
               onChange={(e) => setFilterProfissional(e.target.value)}
-              className="flex-1 md:flex-none bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs font-bold text-zinc-600 outline-none focus:ring-2 focus:ring-emerald-500"
+              disabled={role === 'profissional'}
+              className="flex-1 md:flex-none bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs font-bold text-zinc-600 outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
             >
               <option value="all">Profissional: Todos</option>
               {profissionais.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}

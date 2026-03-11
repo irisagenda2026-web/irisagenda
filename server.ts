@@ -77,6 +77,49 @@ async function startServer() {
     }
   });
 
+  // API Route for creating professional accounts
+  app.post('/api/create-professional', async (req, res) => {
+    const { email, password, name, empresaId, profissionalId } = req.body;
+
+    if (!email || !password || !name || !empresaId || !profissionalId) {
+      return res.status(400).json({ error: 'Dados incompletos' });
+    }
+
+    try {
+      const userRecord = await admin.auth().createUser({
+        email,
+        password,
+        displayName: name,
+      });
+
+      await admin.auth().setCustomUserClaims(userRecord.uid, {
+        role: 'profissional',
+        empresaId: empresaId
+      });
+
+      const db = admin.firestore();
+      await db.collection('users').doc(userRecord.uid).set({
+        id: userRecord.uid,
+        name,
+        email,
+        role: 'profissional',
+        empresaId,
+        createdAt: Date.now(),
+        isActive: true
+      });
+
+      await db.collection('profissionais').doc(profissionalId).update({
+        userId: userRecord.uid,
+        email: email
+      });
+
+      res.status(200).json({ success: true, userId: userRecord.uid });
+    } catch (error: any) {
+      console.error('Server Create Professional Error:', error);
+      res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

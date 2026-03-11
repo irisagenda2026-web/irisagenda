@@ -18,7 +18,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && role !== 'guest') {
-      navigate(role === 'admin' ? '/admin/dashboard' : role === 'empresa' ? '/dashboard/calendar' : '/my-appointments');
+      if (role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (role === 'empresa' || role === 'profissional') {
+        navigate('/dashboard/calendar');
+      } else {
+        navigate('/my-appointments');
+      }
     }
   }, [role, authLoading, navigate]);
 

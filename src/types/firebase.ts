@@ -4,7 +4,7 @@ export interface PlatformSettings {
   faviconUrl: string;
 }
 
-export type UserRole = 'admin' | 'empresa' | 'cliente' | 'guest';
+export type UserRole = 'admin' | 'empresa' | 'profissional' | 'cliente' | 'guest';
 
 export interface User {
   id: string;
@@ -49,6 +49,7 @@ export interface Servico {
   imageUrl?: string;
   commissionType?: 'percentage' | 'fixed';
   commissionValue?: number;
+  professionalIds?: string[]; // IDs of professionals who can perform this service
 }
 
 export interface Agendamento {
@@ -84,6 +85,7 @@ export interface Review {
 export interface Profissional {
   id: string;
   empresaId: string;
+  userId?: string; // Link to the User account
   name: string;
   email?: string;
   phone?: string;

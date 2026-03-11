@@ -7,35 +7,49 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
-import { getAgendamentos, getServicos } from '@/src/services/db';
-import { Agendamento, Servico } from '@/src/types/firebase';
+import { getAgendamentos, getServicos, getProfissionais } from '@/src/services/db';
+import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function MainDashboard() {
+  const { role, user: authUser } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentProfissional, setCurrentProfissional] = useState<Profissional | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
-      const user = auth.currentUser;
-      if (user) {
+      const firebaseUser = auth.currentUser;
+      if (firebaseUser && authUser?.empresaId) {
         const today = new Date();
         today.setHours(0,0,0,0);
         const tonight = new Date();
         tonight.setHours(23,59,59,999);
 
         const [agData, svData] = await Promise.all([
-          getAgendamentos(user.uid, today.getTime(), tonight.getTime()),
-          getServicos(user.uid)
+          getAgendamentos(authUser.empresaId, today.getTime(), tonight.getTime()),
+          getServicos(authUser.empresaId)
         ]);
-        setAgendamentos(agData);
+
+        let filteredAg = agData;
+        if (role === 'profissional') {
+          const profs = await getProfissionais(authUser.empresaId);
+          const myProf = profs.find(p => p.userId === firebaseUser.uid);
+          if (myProf) {
+            setCurrentProfissional(myProf);
+            filteredAg = agData.filter(a => a.profissionalId === myProf.id);
+          }
+        }
+
+        setAgendamentos(filteredAg);
         setServicos(svData);
       }
       setIsLoading(false);
     };
     loadData();
-  }, []);
+  }, [role, authUser]);
 
   const stats = [
     { label: 'Receita Hoje', value: `R$ ${agendamentos.reduce((acc, curr) => acc + curr.totalPrice, 0)}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -49,8 +63,14 @@ export default function MainDashboard() {
       <div className="max-w-7xl mx-auto">
         
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Olá, Lavínia! 👋</h1>
-          <p className="text-zinc-500 mt-1">Aqui está o que está acontecendo na sua clínica hoje.</p>
+          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
+            Olá, {authUser?.name?.split(' ')[0] || 'Profissional'}! 👋
+          </h1>
+          <p className="text-zinc-500 mt-1">
+            {role === 'profissional' 
+              ? 'Aqui está o que está acontecendo na sua agenda hoje.'
+              : 'Aqui está o que está acontecendo na sua clínica hoje.'}
+          </p>
         </header>
 
         {/* Stats Grid */}

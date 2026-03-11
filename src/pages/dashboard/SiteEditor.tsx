@@ -396,7 +396,8 @@ function ServicesForm({ empresaId, onCorsError }: { empresaId?: string, onCorsEr
         isActive: true,
         imageUrl: data.imageUrl || '',
         commissionType: data.commissionType,
-        commissionValue: data.commissionValue
+        commissionValue: data.commissionValue,
+        professionalIds: data.professionalIds || []
       });
     }
     await loadServices();

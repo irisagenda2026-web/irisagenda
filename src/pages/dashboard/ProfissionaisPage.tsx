@@ -35,7 +35,9 @@ export default function ProfissionaisPage() {
     email: '',
     phone: '',
     bio: '',
-    isActive: true
+    isActive: true,
+    createAccount: false,
+    password: ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -74,18 +76,52 @@ export default function ProfissionaisPage() {
     setIsSaving(true);
     try {
       if (editingProfissional) {
-        await updateProfissional(editingProfissional.id, formData);
+        await updateProfissional(editingProfissional.id, {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          bio: formData.bio,
+          isActive: formData.isActive
+        });
       } else {
         if (isAtLimit) {
           alert(`Seu plano ${empresa?.plan.toUpperCase()} permite apenas ${planLimit} profissional(is). Faça upgrade para adicionar mais.`);
           setIsSaving(false);
           return;
         }
-        await addProfissional({
+        const newProfId = await addProfissional({
           empresaId: user.empresaId,
-          ...formData,
-          createdAt: Date.now()
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          bio: formData.bio,
+          isActive: formData.isActive
         });
+
+        // If createAccount is checked, call the API
+        if (formData.createAccount && formData.email && formData.password) {
+          try {
+            const response = await fetch('/api/create-professional', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: formData.email,
+                password: formData.password,
+                name: formData.name,
+                empresaId: user.empresaId,
+                profissionalId: newProfId
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Erro ao criar conta');
+            }
+          } catch (accountError: any) {
+            console.error('Erro ao criar conta:', accountError);
+            alert('Profissional cadastrado, mas houve um erro ao criar a conta de acesso: ' + accountError.message);
+          }
+        }
       }
       setIsModalOpen(false);
       setEditingProfissional(null);
@@ -94,7 +130,9 @@ export default function ProfissionaisPage() {
         email: '', 
         phone: '', 
         bio: '', 
-        isActive: true
+        isActive: true,
+        createAccount: false,
+        password: ''
       });
       loadData();
     } catch (error) {
@@ -377,6 +415,45 @@ export default function ProfissionaisPage() {
                   />
                   <label htmlFor="isActive" className="text-sm text-gray-700">Profissional Ativo</label>
                 </div>
+
+                {!editingProfissional && (
+                  <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="createAccount"
+                        checked={formData.createAccount}
+                        onChange={(e) => setFormData({ ...formData, createAccount: e.target.checked })}
+                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                      />
+                      <label htmlFor="createAccount" className="text-sm font-bold text-emerald-900">Criar conta de acesso</label>
+                    </div>
+                    
+                    {formData.createAccount && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        className="space-y-3 overflow-hidden"
+                      >
+                        <p className="text-xs text-emerald-700">
+                          O profissional poderá entrar no sistema usando o e-mail acima e a senha definida abaixo.
+                        </p>
+                        <div>
+                          <label className="block text-xs font-bold text-emerald-800 uppercase mb-1">Senha de Acesso</label>
+                          <input
+                            required={formData.createAccount}
+                            type="password"
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="w-full px-4 py-2 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                            placeholder="Mínimo 6 caracteres"
+                            minLength={6}
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
 
                 <div className="pt-4 flex gap-3">
                   <button
