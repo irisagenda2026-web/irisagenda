@@ -385,18 +385,18 @@ export default function CalendarView() {
                         return (
                           <div 
                             key={bl.id}
-                            className="absolute left-2 right-2 bg-zinc-100/80 backdrop-blur-sm border border-zinc-200 rounded-xl p-3 shadow-sm flex flex-col justify-center overflow-hidden group"
-                            style={{ top: `${top}px`, height: `${height}px` }}
+                            className="absolute left-2 right-2 bg-zinc-100/80 backdrop-blur-sm border border-zinc-200 rounded-xl p-2 shadow-sm flex flex-col justify-center overflow-hidden group"
+                            style={{ top: `${top}px`, height: `${height}px`, minHeight: '32px' }}
                           >
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-zinc-500">
-                                <Ban size={14} />
-                                <span className="text-sm font-bold">{bl.reason}</span>
+                              <div className="flex items-center gap-2 text-zinc-500 overflow-hidden pr-2">
+                                <Ban size={14} className="shrink-0" />
+                                <span className="text-sm font-bold truncate">{bl.reason}</span>
                               </div>
                               {role === 'empresa' && (
                                 <button 
                                   onClick={() => handleDeleteBloqueio(bl.id)}
-                                  className="p-1.5 bg-white rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shadow-sm"
+                                  className="p-1.5 bg-white rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shadow-sm shrink-0"
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -420,21 +420,21 @@ export default function CalendarView() {
                             key={ag.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="absolute left-2 right-2 bg-emerald-50 border-l-4 border-emerald-500 border-y border-r border-y-emerald-100 border-r-emerald-100 rounded-r-xl p-3 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                            style={{ top: `${top}px`, height: `${height}px` }}
+                            className="absolute left-2 right-2 bg-emerald-50 border-l-4 border-emerald-500 border-y border-r border-y-emerald-100 border-r-emerald-100 rounded-r-xl p-2 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-center"
+                            style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
                           >
-                            <div className="flex justify-between items-start h-full">
-                              <div className="flex flex-col h-full justify-between">
-                                <div>
-                                  <div className="font-bold text-emerald-900 text-sm leading-tight">{ag.clienteName}</div>
-                                  <div className="text-xs text-emerald-700 font-medium mt-0.5">{ag.servicoName}</div>
-                                </div>
-                                <div className="text-[10px] text-emerald-600 flex items-center gap-1 font-bold bg-emerald-100/50 w-fit px-2 py-1 rounded-md">
-                                  <Clock size={10} />
-                                  {new Date(ag.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - {new Date(ag.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                </div>
+                            <div className="flex justify-between items-start w-full">
+                              <div className="flex flex-col overflow-hidden pr-2">
+                                <div className="font-bold text-emerald-900 text-sm leading-tight truncate">{ag.clienteName}</div>
+                                <div className="text-xs text-emerald-700 font-medium truncate">{ag.servicoName}</div>
+                                {height >= 60 && (
+                                  <div className="text-[10px] text-emerald-600 flex items-center gap-1 font-bold bg-emerald-100/50 w-fit px-2 py-0.5 rounded-md mt-1">
+                                    <Clock size={10} />
+                                    {new Date(ag.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - {new Date(ag.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                )}
                               </div>
-                              <div className="text-xs font-bold text-emerald-700 bg-white px-2 py-1 rounded-lg shadow-sm border border-emerald-100">
+                              <div className="text-xs font-bold text-emerald-700 bg-white px-2 py-1 rounded-lg shadow-sm border border-emerald-100 whitespace-nowrap shrink-0">
                                 R$ {ag.totalPrice}
                               </div>
                             </div>
