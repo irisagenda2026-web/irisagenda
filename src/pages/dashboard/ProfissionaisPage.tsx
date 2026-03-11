@@ -83,13 +83,18 @@ export default function ProfissionaisPage() {
           bio: formData.bio,
           isActive: formData.isActive
         });
+
+        // If createAccount is checked for an existing professional
+        if (formData.createAccount && !editingProfissional.userId && formData.email && formData.password) {
+          await createProfessionalAccount(editingProfissional.id);
+        }
       } else {
         if (isAtLimit) {
           alert(`Seu plano ${empresa?.plan.toUpperCase()} permite apenas ${planLimit} profissional(is). Faça upgrade para adicionar mais.`);
           setIsSaving(false);
           return;
         }
-        const newProfId = await addProfissional({
+        const newProfRef = await addProfissional({
           empresaId: user.empresaId,
           name: formData.name,
           email: formData.email,
@@ -100,27 +105,7 @@ export default function ProfissionaisPage() {
 
         // If createAccount is checked, call the API
         if (formData.createAccount && formData.email && formData.password) {
-          try {
-            const response = await fetch('/api/create-professional', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: formData.email,
-                password: formData.password,
-                name: formData.name,
-                empresaId: user.empresaId,
-                profissionalId: newProfId
-              })
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Erro ao criar conta');
-            }
-          } catch (accountError: any) {
-            console.error('Erro ao criar conta:', accountError);
-            alert('Profissional cadastrado, mas houve um erro ao criar a conta de acesso: ' + accountError.message);
-          }
+          await createProfessionalAccount(newProfRef.id);
         }
       }
       setIsModalOpen(false);
@@ -154,6 +139,32 @@ export default function ProfissionaisPage() {
     }
   };
 
+  const createProfessionalAccount = async (profissionalId: string) => {
+    if (!user?.empresaId) return;
+    
+    try {
+      const response = await fetch('/api/create-professional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          empresaId: user.empresaId,
+          profissionalId: profissionalId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar conta');
+      }
+    } catch (accountError: any) {
+      console.error('Erro ao criar conta:', accountError);
+      alert('Houve um erro ao criar a conta de acesso: ' + accountError.message);
+    }
+  };
+
   const filteredProfissionais = profissionais.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -180,7 +191,9 @@ export default function ProfissionaisPage() {
               email: '', 
               phone: '', 
               bio: '', 
-              isActive: true
+              isActive: true,
+              createAccount: false,
+              password: ''
             });
             setIsModalOpen(true);
           }}
@@ -416,7 +429,7 @@ export default function ProfissionaisPage() {
                   <label htmlFor="isActive" className="text-sm text-gray-700">Profissional Ativo</label>
                 </div>
 
-                {!editingProfissional && (
+                {(!editingProfissional || !editingProfissional.userId) && (
                   <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 space-y-3">
                     <div className="flex items-center gap-2">
                       <input
@@ -426,7 +439,9 @@ export default function ProfissionaisPage() {
                         onChange={(e) => setFormData({ ...formData, createAccount: e.target.checked })}
                         className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                       />
-                      <label htmlFor="createAccount" className="text-sm font-bold text-emerald-900">Criar conta de acesso</label>
+                      <label htmlFor="createAccount" className="text-sm font-bold text-emerald-900">
+                        {editingProfissional ? 'Criar conta de acesso para este profissional' : 'Criar conta de acesso'}
+                      </label>
                     </div>
                     
                     {formData.createAccount && (

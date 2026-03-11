@@ -50,6 +50,7 @@ export default function FinanceDashboard() {
 
   const stats = {
     totalRevenue: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? curr.totalPrice : 0), 0),
+    totalCommission: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? (curr.commissionAmount || 0) : 0), 0),
     totalAppointments: agendamentos.length,
     completedAppointments: agendamentos.filter(a => a.status === 'completed').length,
     averageTicket: agendamentos.length > 0 ? agendamentos.reduce((acc, curr) => acc + curr.totalPrice, 0) / agendamentos.length : 0
@@ -129,7 +130,7 @@ export default function FinanceDashboard() {
             </div>
           </div>
 
-          <div className="md:col-span-2 grid grid-cols-2 gap-4">
+          <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-4">
             <StatCard 
               label="Agendamentos" 
               value={stats.totalAppointments.toString()} 
@@ -138,11 +139,19 @@ export default function FinanceDashboard() {
               trendUp={true} 
             />
             <StatCard 
+              label="Comissões" 
+              value={`R$ ${stats.totalCommission.toFixed(2)}`} 
+              icon={Users} 
+              trend="+12%" 
+              trendUp={true} 
+            />
+            <StatCard 
               label="Ticket Médio" 
               value={`R$ ${stats.averageTicket.toFixed(2)}`} 
               icon={TrendingUp} 
               trend="-2%" 
               trendUp={false} 
+              className="col-span-2 md:col-span-1"
             />
           </div>
         </div>
@@ -240,9 +249,9 @@ export default function FinanceDashboard() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, trend, trendUp }: any) {
+function StatCard({ label, value, icon: Icon, trend, trendUp, className }: any) {
   return (
-    <div className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm hover:shadow-md transition-all">
+    <div className={cn("bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm hover:shadow-md transition-all", className)}>
       <div className="flex justify-between items-start mb-4">
         <div className="p-2 bg-zinc-50 rounded-xl">
           <Icon size={20} className="text-zinc-600" />

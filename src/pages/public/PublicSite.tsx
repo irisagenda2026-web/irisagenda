@@ -398,25 +398,40 @@ export default function PublicSite() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {profissionais.map(prof => (
-                    <button
-                      key={prof.id}
-                      onClick={() => {
-                        setSelectedProfissional(prof);
-                        setStep('datetime');
-                      }}
-                      className="flex items-center gap-4 p-4 bg-white border border-zinc-100 rounded-3xl hover:border-emerald-500 hover:shadow-lg transition-all text-left group"
-                    >
-                      <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-2xl shrink-0">
-                        {prof.name.charAt(0)}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-zinc-900 group-hover:text-emerald-600 transition-colors">{prof.name}</h3>
-                        <p className="text-xs text-zinc-500 line-clamp-1">{prof.bio || 'Especialista'}</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-zinc-300 ml-auto group-hover:text-emerald-500 transition-colors" />
-                    </button>
-                  ))}
+                  {profissionais
+                    .filter(prof => {
+                      if (!selectedService?.professionalIds || selectedService.professionalIds.length === 0) {
+                        return true; // If no restrictions, show all
+                      }
+                      return selectedService.professionalIds.includes(prof.id);
+                    })
+                    .map(prof => (
+                      <button
+                        key={prof.id}
+                        onClick={() => {
+                          setSelectedProfissional(prof);
+                          setStep('datetime');
+                        }}
+                        className="flex items-center gap-4 p-4 bg-white border border-zinc-100 rounded-3xl hover:border-emerald-500 hover:shadow-lg transition-all text-left group"
+                      >
+                        <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-2xl shrink-0">
+                          {prof.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-zinc-900 group-hover:text-emerald-600 transition-colors">{prof.name}</h3>
+                          <p className="text-xs text-zinc-500 line-clamp-1">{prof.bio || 'Especialista'}</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-zinc-300 ml-auto group-hover:text-emerald-500 transition-colors" />
+                      </button>
+                    ))}
+                  {profissionais.filter(prof => {
+                    if (!selectedService?.professionalIds || selectedService.professionalIds.length === 0) return true;
+                    return selectedService.professionalIds.includes(prof.id);
+                  }).length === 0 && (
+                    <div className="col-span-full py-12 text-center text-zinc-500 bg-white rounded-3xl border border-dashed border-zinc-200">
+                      Nenhum profissional disponível para este serviço no momento.
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

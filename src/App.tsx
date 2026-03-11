@@ -10,6 +10,7 @@ import MainDashboard from './pages/dashboard/MainDashboard';
 import ClientesPage from './pages/dashboard/ClientesPage';
 import ProfissionaisPage from './pages/dashboard/ProfissionaisPage';
 import BusinessHoursPage from './pages/dashboard/BusinessHoursPage';
+import ProfilePage from './pages/dashboard/ProfilePage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ClientDashboard from './pages/client/ClientDashboard';
 import PublicSite from './pages/public/PublicSite';
@@ -31,7 +32,8 @@ import {
   FileText,
   Scissors,
   UserPlus,
-  Clock
+  Clock,
+  User
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from './utils/cn';
@@ -112,6 +114,7 @@ function AppLayout() {
                 <NavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
                 <NavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
+                <NavLink to="/dashboard/profile" icon={User} label="Perfil" active={location.pathname === '/dashboard/profile'} />
               </>
             )}
 
@@ -120,6 +123,7 @@ function AppLayout() {
                 <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" active={location.pathname === '/dashboard'} />
                 <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Minha Agenda" active={location.pathname === '/dashboard/calendar'} />
                 <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Meus Horários" active={location.pathname === '/dashboard/disponibilidade'} />
+                <NavLink to="/dashboard/profile" icon={User} label="Meu Perfil" active={location.pathname === '/dashboard/profile'} />
               </>
             )}
 
@@ -127,6 +131,7 @@ function AppLayout() {
               <>
                 <NavLink to="/my-appointments" icon={CalendarIcon} label="Meus Agendamentos" active={location.pathname === '/my-appointments'} />
                 <NavLink to="/s/estetica-iris" icon={Home} label="Ver Clínica" active={location.pathname.startsWith('/s/')} />
+                <NavLink to="/dashboard/profile" icon={User} label="Meu Perfil" active={location.pathname === '/dashboard/profile'} />
               </>
             )}
           </div>
@@ -255,6 +260,7 @@ export default function App() {
                 <Route path="/dashboard/clientes" element={<ClientesPage />} />
                 <Route path="/dashboard/profissionais" element={<ProfissionaisPage />} />
                 <Route path="/dashboard/disponibilidade" element={<BusinessHoursPage />} />
+                <Route path="/dashboard/profile" element={<ProfilePage />} />
                 <Route path="/dashboard/site" element={<SiteEditor />} />
 
                 {/* Admin Routes */}

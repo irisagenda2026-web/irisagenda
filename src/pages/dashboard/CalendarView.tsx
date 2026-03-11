@@ -29,7 +29,7 @@ export default function CalendarView() {
   // Filters
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterService, setFilterService] = useState('all');
-  const [filterProfissional, setFilterProfissional] = useState('all');
+  const [filterProfissional, setFilterProfissional] = useState(role === 'profissional' ? 'loading' : 'all');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals state
@@ -46,16 +46,19 @@ export default function CalendarView() {
       const end = new Date(selectedDate);
       end.setHours(23, 59, 59, 999);
 
-      let profIdToFilter = filterProfissional === 'all' ? null : filterProfissional;
+      let profIdToFilter = filterProfissional === 'all' || filterProfissional === 'loading' ? null : filterProfissional;
       
       // If user is a professional, they can ONLY see their own data
       if (role === 'profissional') {
         const profs = await getProfissionais(user.empresaId);
-        const myProf = profs.find(p => p.userId === firebaseUser.uid);
+        const firebaseUser = auth.currentUser;
+        const myProf = profs.find(p => p.userId === firebaseUser?.uid);
         if (myProf) {
           setCurrentProfissional(myProf);
           profIdToFilter = myProf.id;
-          setFilterProfissional(myProf.id);
+          if (filterProfissional !== myProf.id) {
+            setFilterProfissional(myProf.id);
+          }
         }
       }
 
@@ -143,7 +146,7 @@ export default function CalendarView() {
             <p className="text-zinc-500 mt-1">Gerencie seus horários, serviços e disponibilidade.</p>
           </div>
           
-          {role === 'empresa' || role === 'profissional' && (
+          {(role === 'empresa' || role === 'profissional') && (
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               {role === 'empresa' && (
                 <button 

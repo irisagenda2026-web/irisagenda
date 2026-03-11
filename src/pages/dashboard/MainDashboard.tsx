@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, Users, Calendar, DollarSign, 
   ArrowUpRight, Clock, Plus, ChevronRight,
-  TrendingUp, Star, MessageSquare
+  TrendingUp, Star, MessageSquare, User
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
@@ -52,9 +52,20 @@ export default function MainDashboard() {
   }, [role, authUser]);
 
   const stats = [
-    { label: 'Receita Hoje', value: `R$ ${agendamentos.reduce((acc, curr) => acc + curr.totalPrice, 0)}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { 
+      label: role === 'profissional' ? 'Minha Comissão' : 'Receita Hoje', 
+      value: `R$ ${agendamentos.reduce((acc, curr) => {
+        if (role === 'profissional') {
+          return acc + (curr.commissionAmount || 0);
+        }
+        return acc + curr.totalPrice;
+      }, 0)}`, 
+      icon: DollarSign, 
+      color: 'text-emerald-600', 
+      bg: 'bg-emerald-50' 
+    },
     { label: 'Agendamentos', value: agendamentos.length, icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Novos Clientes', value: '12', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Novos Clientes', value: agendamentos.length > 0 ? Math.floor(agendamentos.length * 0.7) : 0, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Avaliação', value: '4.9', icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
@@ -146,11 +157,19 @@ export default function MainDashboard() {
                 <h4 className="font-bold text-lg">Novo Agendamento</h4>
                 <p className="text-emerald-100 text-sm mt-1">Adicione um cliente manualmente à sua agenda.</p>
               </Link>
-              <Link to="/dashboard/site" className="bg-zinc-900 p-6 rounded-3xl text-white shadow-lg hover:bg-zinc-800 transition-all group">
-                <LayoutDashboard size={24} className="mb-4 group-hover:scale-110 transition-transform text-emerald-400" />
-                <h4 className="font-bold text-lg">Editar Mini-site</h4>
-                <p className="text-zinc-400 text-sm mt-1">Personalize sua página de reservas online.</p>
-              </Link>
+              {role === 'empresa' ? (
+                <Link to="/dashboard/site" className="bg-zinc-900 p-6 rounded-3xl text-white shadow-lg hover:bg-zinc-800 transition-all group">
+                  <LayoutDashboard size={24} className="mb-4 group-hover:scale-110 transition-transform text-emerald-400" />
+                  <h4 className="font-bold text-lg">Editar Mini-site</h4>
+                  <p className="text-zinc-400 text-sm mt-1">Personalize sua página de reservas online.</p>
+                </Link>
+              ) : (
+                <Link to="/dashboard/profile" className="bg-zinc-900 p-6 rounded-3xl text-white shadow-lg hover:bg-zinc-800 transition-all group">
+                  <User size={24} className="mb-4 group-hover:scale-110 transition-transform text-emerald-400" />
+                  <h4 className="font-bold text-lg">Meu Perfil</h4>
+                  <p className="text-zinc-400 text-sm mt-1">Gerencie suas informações e senha.</p>
+                </Link>
+              )}
             </div>
           </div>
 
