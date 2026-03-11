@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 if (!admin.apps.length) {
   admin.initializeApp({
     projectId: "irisagenda-b6e66",
-    storageBucket: "irisagenda-b6e66.firebasestorage.app"
+    storageBucket: "irisagenda-b6e66.appspot.com"
   });
 }
 
@@ -39,22 +39,36 @@ async function startServer() {
         return res.status(400).json({ error: 'Dados incompletos' });
       }
 
-      const blob = bucket.file(storagePath);
-      const blobStream = blob.createWriteStream({
-        metadata: {
-          contentType: req.file.mimetype,
-        },
-        resumable: false
-      });
+      const uploadToBucket = async (targetBlob: any) => {
+        const blobStream = targetBlob.createWriteStream({
+          metadata: {
+            contentType: req.file?.mimetype,
+          },
+          resumable: false
+        });
 
-      await new Promise((resolve, reject) => {
-        blobStream.on('error', reject);
-        blobStream.on('finish', resolve);
-        blobStream.end(req.file?.buffer);
-      });
+        await new Promise((resolve, reject) => {
+          blobStream.on('error', reject);
+          blobStream.on('finish', resolve);
+          blobStream.end(req.file?.buffer);
+        });
+      };
 
-      await blob.makePublic();
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+      let finalBlob = bucket.file(storagePath);
+      try {
+        await uploadToBucket(finalBlob);
+      } catch (uploadError: any) {
+        if (uploadError.message?.includes('bucket') || uploadError.code === 404) {
+          const altBucket = admin.storage().bucket("irisagenda-b6e66.firebasestorage.app");
+          finalBlob = altBucket.file(storagePath);
+          await uploadToBucket(finalBlob);
+        } else {
+          throw uploadError;
+        }
+      }
+
+      await finalBlob.makePublic();
+      const publicUrl = `https://storage.googleapis.com/${finalBlob.bucket.name}/${storagePath}`;
 
       res.status(200).json({ url: publicUrl });
     } catch (error: any) {

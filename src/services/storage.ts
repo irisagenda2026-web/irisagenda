@@ -28,7 +28,7 @@ export const uploadImage = async (path: string, file: File) => {
         return data.url as string;
       } catch (e) {
         console.error('JSON Parse Error:', e, 'Text:', text);
-        throw new Error(`Erro ao processar resposta do servidor. Resposta: ${text.substring(0, 100)}`);
+        throw new Error(`Erro ao processar resposta do servidor. Resposta: ${text.substring(0, 300)}`);
       }
     } else {
       if (!response.ok) {

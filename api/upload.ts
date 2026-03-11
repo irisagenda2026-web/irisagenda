@@ -6,7 +6,7 @@ import fs from 'fs';
 if (!admin.apps.length) {
   admin.initializeApp({
     projectId: "irisagenda-b6e66",
-    storageBucket: "irisagenda-b6e66.firebasestorage.app"
+    storageBucket: "irisagenda-b6e66.appspot.com"
   });
 }
 
@@ -36,25 +36,43 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Dados incompletos' });
     }
 
-    // Upload using Admin SDK (bypasses security rules and CORS)
+    // Try to get the file reference. The error usually happens during the actual operation.
     const blob = bucket.file(storagePath);
-    const blobStream = blob.createWriteStream({
-      metadata: {
-        contentType: file.mimetype || 'image/png',
-      },
-      resumable: false
-    });
+    
+    const uploadToBucket = async (targetBlob: any) => {
+      const blobStream = targetBlob.createWriteStream({
+        metadata: {
+          contentType: file.mimetype || 'image/png',
+        },
+        resumable: false
+      });
 
-    await new Promise((resolve, reject) => {
-      fs.createReadStream(file.filepath)
-        .pipe(blobStream)
-        .on('error', reject)
-        .on('finish', resolve);
-    });
+      await new Promise((resolve, reject) => {
+        fs.createReadStream(file.filepath)
+          .pipe(blobStream)
+          .on('error', reject)
+          .on('finish', resolve);
+      });
+    };
+
+    let finalBlob = blob;
+    try {
+      await uploadToBucket(blob);
+    } catch (uploadError: any) {
+      // If it fails with bucket not found, try the alternative
+      if (uploadError.message?.includes('bucket') || uploadError.code === 404) {
+        const altBucketName = "irisagenda-b6e66.firebasestorage.app";
+        const altBucket = admin.storage().bucket(altBucketName);
+        finalBlob = altBucket.file(storagePath);
+        await uploadToBucket(finalBlob);
+      } else {
+        throw uploadError;
+      }
+    }
 
     // Make the file public
-    await blob.makePublic();
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    await finalBlob.makePublic();
+    const publicUrl = `https://storage.googleapis.com/${finalBlob.bucket.name}/${storagePath}`;
 
     return res.status(200).json({ url: publicUrl });
   } catch (error: any) {
