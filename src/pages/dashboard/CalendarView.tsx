@@ -421,22 +421,61 @@ export default function CalendarView() {
                             key={ag.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="absolute left-2 right-2 bg-emerald-50 border-l-4 border-emerald-500 border-y border-r border-y-emerald-100 border-r-emerald-100 rounded-r-xl p-2 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-center"
+                            className={cn(
+                              "absolute left-2 right-2 border-l-4 border-y border-r rounded-r-xl p-2 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-center",
+                              ag.status === 'completed' 
+                                ? "bg-zinc-100 border-l-zinc-400 border-y-zinc-200 border-r-zinc-200 opacity-80" 
+                                : "bg-emerald-50 border-l-emerald-500 border-y-emerald-100 border-r-emerald-100"
+                            )}
                             style={{ top: `${top}px`, height: `${height}px`, minHeight: '40px' }}
                           >
                             <div className="flex justify-between items-start w-full">
                               <div className="flex flex-col overflow-hidden pr-2">
-                                <div className="font-bold text-emerald-900 text-sm leading-tight truncate">{ag.clienteName}</div>
-                                <div className="text-xs text-emerald-700 font-medium truncate">{ag.servicoName}</div>
+                                <div className={cn(
+                                  "font-bold text-sm leading-tight truncate",
+                                  ag.status === 'completed' ? "text-zinc-600" : "text-emerald-900"
+                                )}>{ag.clienteName}</div>
+                                <div className={cn(
+                                  "text-xs font-medium truncate",
+                                  ag.status === 'completed' ? "text-zinc-500" : "text-emerald-700"
+                                )}>{ag.servicoName}</div>
                                 {height >= 60 && (
-                                  <div className="text-[10px] text-emerald-600 flex items-center gap-1 font-bold bg-emerald-100/50 w-fit px-2 py-0.5 rounded-md mt-1">
+                                  <div className={cn(
+                                    "text-[10px] flex items-center gap-1 font-bold w-fit px-2 py-0.5 rounded-md mt-1",
+                                    ag.status === 'completed' ? "text-zinc-400 bg-zinc-200/50" : "text-emerald-600 bg-emerald-100/50"
+                                  )}>
                                     <Clock size={10} />
                                     {new Date(ag.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - {new Date(ag.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                   </div>
                                 )}
                               </div>
-                              <div className="text-xs font-bold text-emerald-700 bg-white px-2 py-1 rounded-lg shadow-sm border border-emerald-100 whitespace-nowrap shrink-0">
-                                R$ {ag.totalPrice}
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <div className={cn(
+                                  "text-xs font-bold bg-white px-2 py-1 rounded-lg shadow-sm border whitespace-nowrap",
+                                  ag.status === 'completed' ? "text-zinc-500 border-zinc-200" : "text-emerald-700 border-emerald-100"
+                                )}>
+                                  R$ {ag.totalPrice}
+                                </div>
+                                {ag.status !== 'completed' && (
+                                  <button 
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (confirm('Deseja marcar este agendamento como concluído?')) {
+                                        await updateAgendamentoStatus(ag.id, 'completed');
+                                        loadData();
+                                      }
+                                    }}
+                                    className="p-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
+                                    title="Concluir"
+                                  >
+                                    <Check size={12} />
+                                  </button>
+                                )}
+                                {ag.status === 'completed' && (
+                                  <div className="text-emerald-600">
+                                    <Check size={14} />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </motion.div>

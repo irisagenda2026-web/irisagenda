@@ -123,6 +123,7 @@ function AppLayout() {
                 <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" active={location.pathname === '/dashboard'} />
                 <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Minha Agenda" active={location.pathname === '/dashboard/calendar'} />
                 <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Meus Horários" active={location.pathname === '/dashboard/disponibilidade'} />
+                <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
                 <NavLink to="/dashboard/profile" icon={User} label="Meu Perfil" active={location.pathname === '/dashboard/profile'} />
               </>
             )}
@@ -192,6 +193,7 @@ function AppLayout() {
                 <NavLink to="/dashboard" icon={LayoutDashboard} label="Início" />
                 <NavLink to="/dashboard/calendar" icon={CalendarIcon} label="Minha Agenda" />
                 <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Meus Horários" />
+                <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" />
               </>
             )}
             {isAdmin && (
@@ -227,6 +229,7 @@ function AppLayout() {
           ) : (
             <>
               <BottomNavLink to="/dashboard/disponibilidade" icon={Clock} label="Horários" active={location.pathname === '/dashboard/disponibilidade'} />
+              <BottomNavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
             </>
           )}
         </div>
