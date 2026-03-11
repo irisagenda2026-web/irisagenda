@@ -20,6 +20,8 @@ import { getEmpresaBySlug, getServicos, createAgendamento, getAgendamentos, getB
 import { Empresa, Servico, Agendamento, Bloqueio, Review, Profissional, AvailabilityOverride } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 
+import { generateTimeSlots as getAvailableTimeSlots } from '@/src/utils/availability';
+
 export default function PublicSite() {
   const { slug } = useParams<{ slug: string }>();
   const { role, user } = useAuth();
@@ -96,66 +98,16 @@ export default function PublicSite() {
   const generateTimeSlots = () => {
     if (!selectedService || !selectedProfissional) return [];
     
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const dayOfWeek = selectedDate.getDay().toString();
-    
-    // Check for overrides first
-    const override = availabilityOverrides.find(o => o.date === dateStr);
-    
-    let activeSlots: any[] = [];
-    
-    if (override) {
-      if (!override.isOpen) return []; // Closed for the day
-      activeSlots = override.slots;
-    } else if (businessHours && businessHours[dayOfWeek]?.isOpen) {
-      activeSlots = businessHours[dayOfWeek].slots;
-    } else {
-      return []; // No business hours defined for this day
-    }
-
-    const availableTimes: string[] = [];
-    
-    activeSlots.forEach(slot => {
-      // Check if service is allowed in this slot
-      if (slot.serviceIds && slot.serviceIds.length > 0 && !slot.serviceIds.includes(selectedService.id)) {
-        return;
-      }
-
-      const [startH, startM] = slot.start.split(':').map(Number);
-      const [endH, endM] = slot.end.split(':').map(Number);
-      
-      let current = new Date(selectedDate);
-      current.setHours(startH, startM, 0, 0);
-      
-      const end = new Date(selectedDate);
-      end.setHours(endH, endM, 0, 0);
-
-      while (current.getTime() + selectedService.durationMinutes * 60000 <= end.getTime()) {
-        const timeStr = format(current, 'HH:mm');
-        const slotStart = current.getTime();
-        const slotEnd = slotStart + selectedService.durationMinutes * 60000;
-
-        // Don't show past times if today
-        if (slotStart > Date.now()) {
-          const isOccupied = existingAgendamentos.some(ag => {
-            return (slotStart < ag.endTime) && (slotEnd > ag.startTime);
-          });
-
-          const isBlocked = existingBloqueios.some(bl => {
-            return (slotStart < bl.endTime) && (slotEnd > bl.startTime);
-          });
-
-          if (!isOccupied && !isBlocked) {
-            availableTimes.push(timeStr);
-          }
-        }
-        
-        // Advance by 15 minutes for more granular selection
-        current = new Date(current.getTime() + 15 * 60000);
-      }
-    });
-
-    return Array.from(new Set(availableTimes)).sort();
+    return getAvailableTimeSlots(
+      selectedDate,
+      businessHours,
+      availabilityOverrides,
+      existingAgendamentos,
+      existingBloqueios,
+      selectedService.durationMinutes,
+      selectedService.id,
+      15 // 15 min intervals
+    ).filter(slot => slot.available).map(slot => slot.time);
   };
 
   const handleSchedule = async () => {

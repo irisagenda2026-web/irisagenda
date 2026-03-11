@@ -551,6 +551,7 @@ export default function CalendarView() {
             onClose={() => setIsBlockModalOpen(false)} 
             selectedDate={selectedDate}
             profissionais={profissionais}
+            agendamentos={agendamentos}
             onSuccess={loadData}
           />
         )}
@@ -568,19 +569,87 @@ export default function CalendarView() {
 
 // --- Modals Components ---
 
+import { generateTimeSlots, TimeSlot } from '@/src/utils/availability';
+import { getAvailabilityOverrides } from '@/src/services/db';
+
 function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  
   const [formData, setFormData] = useState({
     clienteName: '',
     servicoId: servicos.length > 0 ? servicos[0].id : '',
     profissionalId: profissionais.length > 0 ? profissionais[0].id : 'default',
-    hour: '09:00'
+    hour: ''
   });
+
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!formData.profissionalId || !formData.servicoId) return;
+      setLoadingSlots(true);
+      
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const start = new Date(selectedDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(selectedDate);
+      end.setHours(23, 59, 59, 999);
+
+      try {
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const monthStr = `${year}-${month}`;
+
+        const [agData, blData, bhData, ovData] = await Promise.all([
+          getAgendamentos(user.uid, start.getTime(), end.getTime()),
+          getBloqueios(user.uid, formData.profissionalId, start.getTime(), end.getTime()),
+          getBusinessHours(user.uid, formData.profissionalId),
+          getAvailabilityOverrides(user.uid, formData.profissionalId, monthStr)
+        ]);
+
+        const servico = servicos.find((s: any) => s.id === formData.servicoId);
+        const duration = servico ? servico.durationMinutes : 60;
+
+        const profAgendamentos = agData.filter(a => a.profissionalId === formData.profissionalId);
+
+        const slots = generateTimeSlots(
+          selectedDate,
+          bhData,
+          ovData,
+          profAgendamentos,
+          blData,
+          duration,
+          formData.servicoId,
+          15 // 15 min intervals for more flexibility
+        );
+
+        setAvailableSlots(slots);
+        
+        // Auto-select first available slot if current hour is invalid or empty
+        if (slots.length > 0) {
+          const availableOnly = slots.filter(s => s.available);
+          if (availableOnly.length > 0 && (!formData.hour || !availableOnly.find(s => s.time === formData.hour))) {
+            setFormData(prev => ({ ...prev, hour: availableOnly[0].time }));
+          }
+        } else {
+          setFormData(prev => ({ ...prev, hour: '' }));
+        }
+      } catch (error) {
+        console.error("Error fetching availability:", error);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [formData.profissionalId, formData.servicoId, selectedDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user || !formData.servicoId) return;
+    if (!user || !formData.servicoId || !formData.hour) return;
 
     setLoading(true);
     try {
@@ -694,20 +763,43 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-700">Horário</label>
-                <input 
-                  required
-                  type="time" 
-                  value={formData.hour}
-                  onChange={e => setFormData({...formData, hour: e.target.value})}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
+                <label className="text-sm font-semibold text-zinc-700 flex items-center justify-between">
+                  <span>Horário</span>
+                  {loadingSlots && <Loader2 className="animate-spin text-emerald-600" size={14} />}
+                </label>
+                
+                {!loadingSlots && availableSlots.length === 0 ? (
+                  <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-center text-sm text-zinc-500">
+                    Nenhum horário disponível para este dia.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    {availableSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        type="button"
+                        disabled={!slot.available}
+                        onClick={() => setFormData({ ...formData, hour: slot.time })}
+                        className={cn(
+                          "py-2 rounded-lg text-sm font-bold transition-all border",
+                          !slot.available 
+                            ? "bg-zinc-50 text-zinc-300 border-zinc-100 cursor-not-allowed" 
+                            : formData.hour === slot.time
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20"
+                              : "bg-white text-zinc-700 border-zinc-200 hover:border-emerald-500 hover:text-emerald-600"
+                        )}
+                      >
+                        {slot.time}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button 
                 type="submit"
-                disabled={loading}
-                className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mt-2"
+                disabled={loading || !formData.hour || loadingSlots}
+                className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
                 Confirmar Agendamento
@@ -720,8 +812,9 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
   );
 }
 
-function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess }: any) {
+function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     reason: '',
     profissionalId: profissionais.length > 0 ? profissionais[0].id : '',
@@ -731,20 +824,39 @@ function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess }: any)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     const user = auth.currentUser;
     if (!user || !formData.profissionalId) return;
 
+    const [sh, sm] = formData.startHour.split(':').map(Number);
+    const [eh, em] = formData.endHour.split(':').map(Number);
+    
+    const startTime = new Date(selectedDate);
+    startTime.setHours(sh, sm, 0, 0);
+    
+    const endTime = new Date(selectedDate);
+    endTime.setHours(eh, em, 0, 0);
+
+    if (endTime <= startTime) {
+      setError('O horário final deve ser maior que o inicial.');
+      return;
+    }
+
+    // Check for overlaps with existing appointments
+    const profAgendamentos = agendamentos.filter((a: any) => a.profissionalId === formData.profissionalId);
+    const hasOverlap = profAgendamentos.some((ag: any) => {
+      const agStart = new Date(ag.startTime).getTime();
+      const agEnd = new Date(ag.endTime).getTime();
+      return startTime.getTime() < agEnd && endTime.getTime() > agStart;
+    });
+
+    if (hasOverlap) {
+      setError('Já existe um agendamento neste horário para este profissional.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const [sh, sm] = formData.startHour.split(':').map(Number);
-      const [eh, em] = formData.endHour.split(':').map(Number);
-      
-      const startTime = new Date(selectedDate);
-      startTime.setHours(sh, sm, 0, 0);
-      
-      const endTime = new Date(selectedDate);
-      endTime.setHours(eh, em, 0, 0);
-
       await createBloqueio({
         empresaId: user.uid,
         profissionalId: formData.profissionalId,
@@ -757,7 +869,7 @@ function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess }: any)
       onClose();
     } catch (error) {
       console.error(error);
-      alert('Erro ao criar bloqueio');
+      setError('Erro ao criar bloqueio');
     } finally {
       setLoading(false);
     }
@@ -782,6 +894,13 @@ function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess }: any)
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium border border-red-100 flex items-center gap-2">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+          
           <div className="space-y-2">
             <label className="text-sm font-semibold text-zinc-700">Profissional</label>
             <select 
