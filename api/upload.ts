@@ -26,46 +26,47 @@ export default async function handler(req: any, res: any) {
     maxFileSize: 10 * 1024 * 1024, // 10MB
   });
 
-  return new Promise((resolve, reject) => {
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        console.error('Formidable Parse Error:', err);
-        res.status(500).json({ error: 'Erro ao processar o arquivo' });
-        return resolve(true);
-      }
-
-      const storagePath = Array.isArray(fields.path) ? fields.path[0] : fields.path;
-      const file = Array.isArray(files.file) ? files.file[0] : files.file;
-
-      if (!storagePath) {
-        res.status(400).json({ error: 'Caminho de destino não fornecido' });
-        return resolve(true);
-      }
-
-      if (!file) {
-        res.status(400).json({ error: 'Nenhum arquivo enviado' });
-        return resolve(true);
-      }
-
-      try {
-        const fileBuffer = fs.readFileSync(file.filepath);
-        const storageRef = ref(storage, storagePath);
-        const metadata = {
-          contentType: file.mimetype || 'image/png',
-        };
-
-        const snapshot = await uploadBytes(storageRef, fileBuffer, metadata);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-
-        res.status(200).json({ url: downloadURL });
-        resolve(true);
-      } catch (error: any) {
-        console.error('Firebase Upload Error:', error);
-        res.status(500).json({ error: error.message || 'Erro ao enviar para o Firebase' });
-        resolve(true);
-      }
+  try {
+    const { fields, files } = await new Promise<{fields: any, files: any}>((resolve, reject) => {
+      form.parse(req, (err, fields, files) => {
+        if (err) {
+          console.error('Formidable Parse Error:', err);
+          reject(err);
+        } else {
+          resolve({ fields, files });
+        }
+      });
     });
-  });
+
+    const storagePath = Array.isArray(fields.path) ? fields.path[0] : fields.path;
+    const file = Array.isArray(files.file) ? files.file[0] : files.file;
+
+    if (!storagePath) {
+      return res.status(400).json({ error: 'Caminho de destino não fornecido' });
+    }
+
+    if (!file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    const fileBuffer = fs.readFileSync(file.filepath);
+    const storageRef = ref(storage, storagePath);
+    const metadata = {
+      contentType: file.mimetype || 'image/png',
+    };
+
+    const snapshot = await uploadBytes(storageRef, fileBuffer, metadata);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    return res.status(200).json({ url: downloadURL });
+  } catch (error: any) {
+    console.error('Vercel Upload Error:', error);
+    // Ensure we always return JSON
+    return res.status(500).json({ 
+      error: error.message || 'Erro interno no servidor de upload',
+      details: error.toString()
+    });
+  }
 }
 
 export const config = {

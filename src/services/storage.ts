@@ -27,7 +27,7 @@ export const uploadImage = async (path: string, file: File) => {
         }
         return data.url as string;
       } catch (e) {
-        throw new Error(`Erro ao processar resposta do servidor: A resposta não é um JSON válido.`);
+        throw new Error(`Erro ao processar resposta do servidor: A resposta não é um JSON válido. Conteúdo recebido: ${text.substring(0, 200)}`);
       }
     } else {
       if (!response.ok) {
