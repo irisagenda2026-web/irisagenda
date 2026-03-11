@@ -465,10 +465,11 @@ export default function CalendarView() {
                                         loadData();
                                       }
                                     }}
-                                    className="p-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                                    title="Concluir"
+                                    className="flex items-center gap-1 px-2 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                                    title="Concluir Atendimento"
                                   >
-                                    <Check size={12} />
+                                    <Check size={14} />
+                                    <span className="text-[10px] font-bold uppercase">Concluir</span>
                                   </button>
                                 )}
                                 {ag.status === 'completed' && (

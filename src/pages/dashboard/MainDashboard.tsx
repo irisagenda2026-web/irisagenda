@@ -3,14 +3,15 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, Users, Calendar, DollarSign, 
   ArrowUpRight, Clock, Plus, ChevronRight,
-  TrendingUp, Star, MessageSquare, User
+  TrendingUp, Star, MessageSquare, User, Check
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
-import { getAgendamentos, getServicos, getProfissionais, getAllAgendamentos } from '@/src/services/db';
+import { getAgendamentos, getServicos, getProfissionais, getAllAgendamentos, updateAgendamentoStatus } from '@/src/services/db';
 import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { useMemo } from 'react';
 
 export default function MainDashboard() {
   const { role, user: authUser } = useAuth();
@@ -20,50 +21,69 @@ export default function MainDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentProfissional, setCurrentProfissional] = useState<Profissional | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      const firebaseUser = auth.currentUser;
-      if (firebaseUser && authUser?.empresaId) {
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const tonight = new Date();
-        tonight.setHours(23,59,59,999);
+  const loadData = async () => {
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser && authUser?.empresaId) {
+      setIsLoading(true);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const tonight = new Date();
+      tonight.setHours(23,59,59,999);
 
-        const [agData, svData, allAgData] = await Promise.all([
-          getAgendamentos(authUser.empresaId, today.getTime(), tonight.getTime()),
-          getServicos(authUser.empresaId),
-          role === 'profissional' ? getAllAgendamentos(authUser.empresaId) : Promise.resolve([])
-        ]);
+      const [agData, svData, allAgData] = await Promise.all([
+        getAgendamentos(authUser.empresaId, today.getTime(), tonight.getTime()),
+        getServicos(authUser.empresaId),
+        role === 'profissional' ? getAllAgendamentos(authUser.empresaId) : Promise.resolve([])
+      ]);
 
-        let filteredAg = agData;
-        if (role === 'profissional') {
-          const profs = await getProfissionais(authUser.empresaId);
-          const myProf = profs.find(p => p.userId === firebaseUser.uid);
-          if (myProf) {
-            setCurrentProfissional(myProf);
-            filteredAg = agData.filter(a => a.profissionalId === myProf.id);
-            
-            // Calculate total balance from all completed agendamentos
-            const myAllAg = allAgData.filter(a => a.profissionalId === myProf.id && a.status === 'completed');
-            const balance = myAllAg.reduce((acc, curr) => acc + (curr.commissionAmount || 0), 0);
-            setTotalBalance(balance);
-          }
+      let filteredAg = agData;
+      if (role === 'profissional') {
+        const profs = await getProfissionais(authUser.empresaId);
+        const myProf = profs.find(p => p.userId === firebaseUser.uid);
+        if (myProf) {
+          setCurrentProfissional(myProf);
+          filteredAg = agData.filter(a => a.profissionalId === myProf.id);
+          
+          // Calculate total balance from all completed agendamentos
+          const myAllAg = allAgData.filter(a => a.profissionalId === myProf.id && (a.status === 'completed' || a.status === 'confirmed'));
+          const balance = myAllAg.reduce((acc, curr) => {
+            if (curr.commissionAmount !== undefined) return acc + curr.commissionAmount;
+            // Fallback calculation if missing
+            const s = svData.find(s => s.id === curr.servicoId);
+            if (!s) return acc;
+            const profComm = s.professionalCommissions?.[myProf.id];
+            const type = profComm?.type || s.commissionType || 'percentage';
+            const val = profComm?.value ?? s.commissionValue ?? 0;
+            const amt = type === 'percentage' ? (curr.totalPrice * val) / 100 : val;
+            return acc + amt;
+          }, 0);
+          setTotalBalance(balance);
         }
-
-        setAgendamentos(filteredAg);
-        setServicos(svData);
       }
+
+      setAgendamentos(filteredAg);
+      setServicos(svData);
       setIsLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, [role, authUser]);
 
-  const stats = [
+  const stats = useMemo(() => [
     { 
       label: role === 'profissional' ? 'Comissão Hoje' : 'Receita Hoje', 
       value: `R$ ${agendamentos.reduce((acc, curr) => {
         if (role === 'profissional') {
-          return acc + (curr.commissionAmount || 0);
+          if (curr.commissionAmount !== undefined) return acc + curr.commissionAmount;
+          // Fallback
+          const s = servicos.find(s => s.id === curr.servicoId);
+          if (!s || !currentProfissional) return acc;
+          const profComm = s.professionalCommissions?.[currentProfissional.id];
+          const type = profComm?.type || s.commissionType || 'percentage';
+          const val = profComm?.value ?? s.commissionValue ?? 0;
+          return acc + (type === 'percentage' ? (curr.totalPrice * val) / 100 : val);
         }
         return acc + curr.totalPrice;
       }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 
@@ -82,7 +102,7 @@ export default function MainDashboard() {
     },
     { label: 'Novos Clientes', value: agendamentos.length > 0 ? Math.floor(agendamentos.length * 0.7) : 0, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Avaliação', value: '4.9', icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' },
-  ];
+  ], [role, agendamentos, servicos, currentProfissional, totalBalance]);
 
   return (
     <div className="p-4 md:p-8 bg-zinc-50 min-h-screen pb-24 md:pb-8">
@@ -155,7 +175,30 @@ export default function MainDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Confirmado</span>
+                          <span className={cn(
+                            "text-xs font-bold px-2 py-1 rounded-lg",
+                            ag.status === 'completed' 
+                              ? "text-white bg-emerald-600" 
+                              : "text-emerald-600 bg-emerald-50"
+                          )}>
+                            {ag.status === 'completed' ? 'Concluído' : 'Confirmado'}
+                          </span>
+                          {ag.status !== 'completed' && (
+                            <button
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (confirm('Deseja marcar este agendamento como concluído?')) {
+                                  await updateAgendamentoStatus(ag.id, 'completed');
+                                  loadData();
+                                }
+                              }}
+                              className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm active:scale-95"
+                              title="Concluir"
+                            >
+                              <Check size={14} />
+                            </button>
+                          )}
                           <ChevronRight size={16} className="text-zinc-300 group-hover:text-zinc-500 transition-colors" />
                         </div>
                       </div>

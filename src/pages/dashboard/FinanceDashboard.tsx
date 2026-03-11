@@ -25,32 +25,39 @@ import {
   Area
 } from 'recharts';
 import { auth } from '@/src/services/firebase';
-import { getAllAgendamentos, getProfissionais } from '@/src/services/db';
-import { Agendamento } from '@/src/types/firebase';
+import { getAllAgendamentos, getProfissionais, getServicos } from '@/src/services/db';
+import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
 import { cn } from '@/src/utils/cn';
 import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function FinanceDashboard() {
   const { role, user } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [servicos, setServicos] = useState<Servico[]>([]);
+  const [currentProf, setCurrentProf] = useState<Profissional | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       if (user?.empresaId) {
-        const data = await getAllAgendamentos(user.empresaId);
+        const [agData, svData] = await Promise.all([
+          getAllAgendamentos(user.empresaId),
+          getServicos(user.empresaId)
+        ]);
+        setServicos(svData);
+        
         if (role === 'profissional') {
-          // Find the professional record for this user
           const profs = await getProfissionais(user.empresaId);
           const myProf = profs.find(p => p.userId === auth.currentUser?.uid);
           if (myProf) {
-            setAgendamentos(data.filter(a => a.profissionalId === myProf.id));
+            setCurrentProf(myProf);
+            setAgendamentos(agData.filter(a => a.profissionalId === myProf.id));
           } else {
             setAgendamentos([]);
           }
         } else {
-          setAgendamentos(data);
+          setAgendamentos(agData);
         }
       }
       setIsLoading(false);
@@ -60,7 +67,20 @@ export default function FinanceDashboard() {
 
   const stats = {
     totalRevenue: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? curr.totalPrice : 0), 0),
-    totalCommission: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? (curr.commissionAmount || 0) : 0), 0),
+    totalCommission: agendamentos.reduce((acc, curr) => {
+      if (curr.status !== 'completed' && curr.status !== 'confirmed') return acc;
+      if (curr.commissionAmount !== undefined) return acc + curr.commissionAmount;
+      
+      // Fallback
+      const s = servicos.find(s => s.id === curr.servicoId);
+      if (!s || (role === 'profissional' && !currentProf)) return acc;
+      
+      const profId = role === 'profissional' ? currentProf!.id : curr.profissionalId;
+      const profComm = s.professionalCommissions?.[profId];
+      const type = profComm?.type || s.commissionType || 'percentage';
+      const val = profComm?.value ?? s.commissionValue ?? 0;
+      return acc + (type === 'percentage' ? (curr.totalPrice * val) / 100 : val);
+    }, 0),
     totalAppointments: agendamentos.length,
     completedAppointments: agendamentos.filter(a => a.status === 'completed').length,
     averageTicket: agendamentos.length > 0 ? agendamentos.reduce((acc, curr) => acc + curr.totalPrice, 0) / agendamentos.length : 0
