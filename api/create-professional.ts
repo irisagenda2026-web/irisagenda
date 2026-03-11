@@ -1,7 +1,18 @@
 import admin from 'firebase-admin';
 
+let credential;
+if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+  try {
+    const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
+    credential = admin.credential.cert(serviceAccount);
+  } catch (e) {
+    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64', e);
+  }
+}
+
 if (!admin.apps.length) {
   admin.initializeApp({
+    credential: credential || admin.credential.applicationDefault(),
     projectId: "irisagenda-b6e66"
   });
 }
