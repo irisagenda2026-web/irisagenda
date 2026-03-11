@@ -36,45 +36,59 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Dados incompletos' });
     }
 
-    // Try to get the file reference. The error usually happens during the actual operation.
-    const blob = bucket.file(storagePath);
+    // List of possible bucket names to try
+    const bucketNames = [
+      "irisagenda-b6e66.firebasestorage.app",
+      "irisagenda-b6e66.appspot.com",
+      "irisagenda-b6e66"
+    ];
+
+    let lastError = null;
     
-    const uploadToBucket = async (targetBlob: any) => {
-      const blobStream = targetBlob.createWriteStream({
-        metadata: {
-          contentType: file.mimetype || 'image/png',
-        },
-        resumable: false
-      });
+    for (const bucketName of bucketNames) {
+      try {
+        console.log(`Attempting upload to bucket: ${bucketName}`);
+        const currentBucket = admin.storage().bucket(bucketName);
+        const blob = currentBucket.file(storagePath);
+        
+        const blobStream = blob.createWriteStream({
+          metadata: {
+            contentType: file.mimetype || 'image/png',
+          },
+          resumable: false
+        });
 
-      await new Promise((resolve, reject) => {
-        fs.createReadStream(file.filepath)
-          .pipe(blobStream)
-          .on('error', reject)
-          .on('finish', resolve);
-      });
-    };
+        await new Promise((resolve, reject) => {
+          fs.createReadStream(file.filepath)
+            .pipe(blobStream)
+            .on('error', reject)
+            .on('finish', resolve);
+        });
 
-    let finalBlob = blob;
-    try {
-      await uploadToBucket(blob);
-    } catch (uploadError: any) {
-      // If it fails with bucket not found, try the alternative
-      if (uploadError.message?.includes('bucket') || uploadError.code === 404) {
-        const altBucketName = "irisagenda-b6e66.firebasestorage.app";
-        const altBucket = admin.storage().bucket(altBucketName);
-        finalBlob = altBucket.file(storagePath);
-        await uploadToBucket(finalBlob);
-      } else {
-        throw uploadError;
+        // Try to make public, but don't block if it fails (Uniform access might be on)
+        try {
+          await blob.makePublic();
+        } catch (e) {
+          console.warn(`Could not make public on ${bucketName}, proceeding anyway...`);
+        }
+
+        const publicUrl = `https://storage.googleapis.com/${bucketName}/${storagePath}`;
+        return res.status(200).json({ url: publicUrl });
+        
+      } catch (err: any) {
+        console.error(`Failed upload to ${bucketName}:`, err.message);
+        lastError = err;
+        continue; // Try next bucket
       }
     }
 
-    // Make the file public
-    await finalBlob.makePublic();
-    const publicUrl = `https://storage.googleapis.com/${finalBlob.bucket.name}/${storagePath}`;
+    // If we reach here, all buckets failed
+    return res.status(500).json({ 
+      error: "Não foi possível encontrar um bucket válido no seu Firebase.",
+      details: lastError?.message || "Erro desconhecido",
+      tried: bucketNames
+    });
 
-    return res.status(200).json({ url: publicUrl });
   } catch (error: any) {
     console.error('Vercel Upload Error:', error);
     return res.status(500).json({ 
