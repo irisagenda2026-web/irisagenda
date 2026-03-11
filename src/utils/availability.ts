@@ -30,7 +30,7 @@ export function generateTimeSlots(
   const override = overrides.find(o => o.date === dateStr);
   
   if (override) {
-    isWorkingDay = override.isWorkingDay;
+    isWorkingDay = override.isOpen;
     if (isWorkingDay && override.slots) {
       workingSlots = override.slots;
     }

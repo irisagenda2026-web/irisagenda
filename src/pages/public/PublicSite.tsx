@@ -59,6 +59,12 @@ export default function PublicSite() {
           setServicos(svs.filter(s => s.isActive));
           setReviews(revs);
           setProfissionais(profs.filter(p => p.isActive));
+          
+          // Auto-select professional if only one
+          const activeProfs = profs.filter(p => p.isActive);
+          if (activeProfs.length === 1) {
+            setSelectedProfissional(activeProfs[0]);
+          }
         }
       }
       setIsLoading(false);
