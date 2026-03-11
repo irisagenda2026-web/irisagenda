@@ -5,6 +5,7 @@ import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
 import { getEmpresa, updateEmpresa, getServicos, addServico, updateServico, deleteServico } from '@/src/services/db';
 import { uploadImage, deleteImage } from '@/src/services/storage';
+import { compressImage } from '@/src/utils/image';
 import { Empresa, Servico } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import CorsErrorModal from '@/src/components/CorsErrorModal';
@@ -174,16 +175,17 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
     if (!file) return;
     setIsUploadingLogo(true);
     try {
-      const url = await uploadImage(`clinics/${empresa.id}/logo-${Date.now()}`, file);
+      const compressed = await compressImage(file, 400, 400, 0.8);
+      const url = await uploadImage(`clinics/${empresa.id}/logo-${Date.now()}`, compressed);
       const updated = { ...empresa, logoUrl: url };
       setEmpresa(updated);
       await updateEmpresa(empresa.id, { logoUrl: url });
     } catch (error: any) {
       console.error(error);
-      if (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
+      if (error.message?.includes('Timeout') || error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
         onCorsError();
       } else {
-        alert('Erro ao enviar logo.');
+        alert('Erro ao enviar logo: ' + (error.message || 'Erro desconhecido'));
       }
     } finally {
       setIsUploadingLogo(false);
@@ -195,16 +197,17 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
     if (!file) return;
     setIsUploadingCover(true);
     try {
-      const url = await uploadImage(`clinics/${empresa.id}/cover-${Date.now()}`, file);
+      const compressed = await compressImage(file, 1920, 1080, 0.7);
+      const url = await uploadImage(`clinics/${empresa.id}/cover-${Date.now()}`, compressed);
       const updated = { ...empresa, coverUrl: url };
       setEmpresa(updated);
       await updateEmpresa(empresa.id, { coverUrl: url });
     } catch (error: any) {
       console.error(error);
-      if (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
+      if (error.message?.includes('Timeout') || error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
         onCorsError();
       } else {
-        alert('Erro ao enviar capa.');
+        alert('Erro ao enviar capa: ' + (error.message || 'Erro desconhecido'));
       }
     } finally {
       setIsUploadingCover(false);
@@ -216,16 +219,17 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
     if (!file) return;
     setIsUploadingFavicon(true);
     try {
-      const url = await uploadImage(`clinics/${empresa.id}/favicon-${Date.now()}`, file);
+      const compressed = await compressImage(file, 128, 128, 0.8);
+      const url = await uploadImage(`clinics/${empresa.id}/favicon-${Date.now()}`, compressed);
       const updated = { ...empresa, faviconUrl: url };
       setEmpresa(updated);
       await updateEmpresa(empresa.id, { faviconUrl: url });
     } catch (error: any) {
       console.error(error);
-      if (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
+      if (error.message?.includes('Timeout') || error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
         onCorsError();
       } else {
-        alert('Erro ao enviar favicon.');
+        alert('Erro ao enviar favicon: ' + (error.message || 'Erro desconhecido'));
       }
     } finally {
       setIsUploadingFavicon(false);
@@ -528,8 +532,9 @@ function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | 
 
     setIsUploading(true);
     try {
+      const compressed = await compressImage(file, 1200, 1200, 0.7);
       const fileName = `${Date.now()}-${file.name}`;
-      const url = await uploadImage(`clinics/${empresa.id}/gallery/${fileName}`, file);
+      const url = await uploadImage(`clinics/${empresa.id}/gallery/${fileName}`, compressed);
       
       const newGallery = [...(empresa.gallery || []), url];
       const updatedEmpresa = { ...empresa, gallery: newGallery };
@@ -537,10 +542,10 @@ function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | 
       await updateEmpresa(empresa.id, { gallery: newGallery });
     } catch (err: any) {
       console.error(err);
-      if (err.message && (err.message.includes('network') || err.message.includes('CORS') || err.code === 'storage/unknown')) {
+      if (err.message?.includes('Timeout') || err.message?.includes('network') || err.message?.includes('CORS') || err.code === 'storage/unknown') {
         onCorsError();
       } else {
-        alert('Erro ao fazer upload da imagem.');
+        alert('Erro ao fazer upload da imagem: ' + (err.message || 'Erro desconhecido'));
       }
     } finally {
       setIsUploading(false);

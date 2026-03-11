@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Loader2, DollarSign, Clock, Tag, AlignLeft, Image as ImageIcon, Upload } from 'lucide-react';
 import { Servico } from '@/src/types/firebase';
 import { uploadImage } from '@/src/services/storage';
+import { compressImage } from '@/src/utils/image';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -54,8 +55,9 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
 
     setIsUploading(true);
     try {
+      const compressed = await compressImage(file, 800, 800, 0.7);
       const fileName = `services/${Date.now()}-${file.name}`;
-      const url = await uploadImage(`clinics/${empresaId}/services/${fileName}`, file);
+      const url = await uploadImage(`clinics/${empresaId}/services/${fileName}`, compressed);
       setFormData(prev => ({ ...prev, imageUrl: url }));
     } catch (error: any) {
       console.error(error);

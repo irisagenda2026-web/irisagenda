@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Save, Loader2, Image as ImageIcon, Globe, Type } from 'lucide-react';
 import { usePlatform } from '../../contexts/PlatformContext';
 import { updatePlatformSettings } from '../../services/db';
+import { compressImage, fileToBase64 } from '../../utils/image';
 
 export default function AdminSettings() {
   const { settings, refreshSettings } = usePlatform();
@@ -25,20 +26,33 @@ export default function AdminSettings() {
     }
   }, [settings]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'faviconUrl') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'faviconUrl') => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (limit to 2MB to avoid huge base64 strings)
-      if (file.size > 2 * 1024 * 1024) {
-        setError('A imagem deve ter no máximo 2MB.');
-        return;
-      }
+      setIsLoading(true);
+      setError('');
+      
+      try {
+        // Compress image (smaller for favicon, standard for logo)
+        const maxWidth = field === 'faviconUrl' ? 128 : 800;
+        const maxHeight = field === 'faviconUrl' ? 128 : 800;
+        
+        const compressedFile = await compressImage(file, maxWidth, maxHeight, 0.6);
+        
+        // Check final base64 size (Firestore limit is 1MB total, so we aim for < 300KB per image)
+        if (compressedFile.size > 500 * 1024) {
+          setError('A imagem comprimida ainda é muito grande. Tente uma imagem menor.');
+          return;
+        }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, [field]: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+        const base64 = await fileToBase64(compressedFile);
+        setFormData(prev => ({ ...prev, [field]: base64 }));
+      } catch (err) {
+        console.error(err);
+        setError('Erro ao processar imagem.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 

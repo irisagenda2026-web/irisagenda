@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
   Save, 
@@ -69,7 +69,8 @@ export default function BusinessHoursPage() {
   const [hours, setHours] = useState<BusinessHours>(DEFAULT_HOURS);
   const [overrides, setOverrides] = useState<AvailabilityOverride[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
-  const [selectedProfissionalId, setSelectedProfissionalId] = useState<string>('');
+  const [selectedProfissionalIds, setSelectedProfissionalIds] = useState<string[]>([]);
+  const [isProfDropdownOpen, setIsProfDropdownOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,10 +81,10 @@ export default function BusinessHoursPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedProfissionalId) {
+    if (selectedProfissionalIds.length > 0) {
       loadData();
     }
-  }, [currentMonth, selectedProfissionalId]);
+  }, [currentMonth, selectedProfissionalIds[0]]);
 
   const loadInitialData = async () => {
     const user = auth.currentUser;
@@ -93,7 +94,7 @@ export default function BusinessHoursPage() {
       const profs = await getProfissionais(user.uid);
       setProfissionais(profs);
       if (profs.length > 0) {
-        setSelectedProfissionalId(profs[0].id);
+        setSelectedProfissionalIds([profs[0].id]);
       } else {
         setLoading(false);
       }
@@ -105,12 +106,13 @@ export default function BusinessHoursPage() {
 
   const loadData = async () => {
     const user = auth.currentUser;
-    if (!user || !selectedProfissionalId) return;
+    const primaryId = selectedProfissionalIds[0];
+    if (!user || !primaryId) return;
 
     try {
       const [hoursData, overridesData] = await Promise.all([
-        getBusinessHours(user.uid, selectedProfissionalId),
-        getAvailabilityOverrides(user.uid, selectedProfissionalId, format(currentMonth, 'yyyy-MM'))
+        getBusinessHours(user.uid, primaryId),
+        getAvailabilityOverrides(user.uid, primaryId, format(currentMonth, 'yyyy-MM'))
       ]);
 
       setHours(hoursData || DEFAULT_HOURS);
@@ -124,20 +126,24 @@ export default function BusinessHoursPage() {
 
   const handleSaveOverride = async (date: string, isOpen: boolean, slots: AvailabilitySlot[]) => {
     const user = auth.currentUser;
-    if (!user || !selectedProfissionalId) return;
+    if (!user || selectedProfissionalIds.length === 0) return;
 
     try {
-      await saveAvailabilityOverride({
-        empresaId: user.uid,
-        profissionalId: selectedProfissionalId,
-        date,
-        isOpen,
-        slots
-      });
-      // Refresh overrides
-      const data = await getAvailabilityOverrides(user.uid, selectedProfissionalId, format(currentMonth, 'yyyy-MM'));
+      await Promise.all(selectedProfissionalIds.map(id => 
+        saveAvailabilityOverride({
+          empresaId: user.uid,
+          profissionalId: id,
+          date,
+          isOpen,
+          slots
+        })
+      ));
+      
+      // Refresh overrides for the primary view
+      const primaryId = selectedProfissionalIds[0];
+      const data = await getAvailabilityOverrides(user.uid, primaryId, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
-      setMessage({ type: 'success', text: 'Disponibilidade do dia atualizada!' });
+      setMessage({ type: 'success', text: `Disponibilidade atualizada para ${selectedProfissionalIds.length} profissional(is)!` });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
       console.error('Erro ao salvar override:', error);
@@ -147,14 +153,18 @@ export default function BusinessHoursPage() {
 
   const handleBulkSave = async (dates: string[], isOpen: boolean, slots: AvailabilitySlot[]) => {
     const user = auth.currentUser;
-    if (!user || !selectedProfissionalId) return;
+    if (!user || selectedProfissionalIds.length === 0) return;
 
     try {
-      await bulkSaveAvailability(user.uid, selectedProfissionalId, dates, { isOpen, slots });
-      // Refresh overrides
-      const data = await getAvailabilityOverrides(user.uid, selectedProfissionalId, format(currentMonth, 'yyyy-MM'));
+      await Promise.all(selectedProfissionalIds.map(id => 
+        bulkSaveAvailability(user.uid, id, dates, { isOpen, slots })
+      ));
+      
+      // Refresh overrides for the primary view
+      const primaryId = selectedProfissionalIds[0];
+      const data = await getAvailabilityOverrides(user.uid, primaryId, format(currentMonth, 'yyyy-MM'));
       setOverrides(data);
-      setMessage({ type: 'success', text: `${dates.length} dias atualizados com sucesso!` });
+      setMessage({ type: 'success', text: `${dates.length} dias atualizados para ${selectedProfissionalIds.length} profissional(is)!` });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
       console.error('Erro ao salvar em massa:', error);
@@ -164,14 +174,16 @@ export default function BusinessHoursPage() {
 
   const handleSave = async () => {
     const user = auth.currentUser;
-    if (!user || !selectedProfissionalId) return;
+    if (!user || selectedProfissionalIds.length === 0) return;
 
     setSaving(true);
     setMessage(null);
 
     try {
-      await saveBusinessHours(user.uid, selectedProfissionalId, hours);
-      setMessage({ type: 'success', text: 'Horários salvos com sucesso!' });
+      await Promise.all(selectedProfissionalIds.map(id => 
+        saveBusinessHours(user.uid, id, hours)
+      ));
+      setMessage({ type: 'success', text: `Horários salvos para ${selectedProfissionalIds.length} profissional(is)!` });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
       console.error('Erro ao salvar horários:', error);
@@ -299,32 +311,130 @@ export default function BusinessHoursPage() {
           
           <div className="h-12 w-px bg-zinc-200 hidden lg:block" />
           
-          <div className="hidden lg:block">
-            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional</label>
-            <select
-              value={selectedProfissionalId}
-              onChange={(e) => setSelectedProfissionalId(e.target.value)}
-              className="bg-white border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 pl-3 pr-10 shadow-sm"
+          <div className="hidden lg:block relative">
+            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional(is)</label>
+            <button 
+              onClick={() => setIsProfDropdownOpen(!isProfDropdownOpen)}
+              className="bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 px-4 shadow-sm flex items-center gap-2 min-w-[220px] justify-between"
             >
-              {profissionais.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-zinc-400" />
+                <span className="truncate max-w-[150px]">
+                  {selectedProfissionalIds.length === 1 
+                    ? profissionais.find(p => p.id === selectedProfissionalIds[0])?.name 
+                    : `${selectedProfissionalIds.length} selecionados`}
+                </span>
+              </div>
+              <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isProfDropdownOpen && "rotate-90")} />
+            </button>
+            
+            <AnimatePresence>
+              {isProfDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsProfDropdownOpen(false)} />
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 mt-2 w-64 bg-white border border-zinc-200 rounded-2xl shadow-xl z-50 p-2 max-h-64 overflow-y-auto"
+                  >
+                    <button 
+                      onClick={() => {
+                        if (selectedProfissionalIds.length === profissionais.length) {
+                          setSelectedProfissionalIds([profissionais[0].id]);
+                        } else {
+                          setSelectedProfissionalIds(profissionais.map(p => p.id));
+                        }
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-50 mb-1"
+                    >
+                      {selectedProfissionalIds.length === profissionais.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                    </button>
+                    {profissionais.map(p => (
+                      <label key={p.id} className="flex items-center gap-3 px-3 py-2 hover:bg-zinc-50 rounded-lg cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={selectedProfissionalIds.includes(p.id)}
+                          onChange={() => {
+                            setSelectedProfissionalIds(prev => 
+                              prev.includes(p.id) 
+                                ? (prev.length > 1 ? prev.filter(id => id !== p.id) : prev) 
+                                : [...prev, p.id]
+                            );
+                          }}
+                          className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-sm font-medium text-zinc-700">{p.name}</span>
+                      </label>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
         
         <div className="flex flex-col gap-4">
-          <div className="lg:hidden">
-            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional</label>
-            <select
-              value={selectedProfissionalId}
-              onChange={(e) => setSelectedProfissionalId(e.target.value)}
-              className="w-full bg-white border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 pl-3 pr-10 shadow-sm"
+          <div className="lg:hidden relative">
+            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">Profissional(is)</label>
+            <button 
+              onClick={() => setIsProfDropdownOpen(!isProfDropdownOpen)}
+              className="w-full bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 px-4 shadow-sm flex items-center gap-2 justify-between"
             >
-              {profissionais.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-zinc-400" />
+                <span>
+                  {selectedProfissionalIds.length === 1 
+                    ? profissionais.find(p => p.id === selectedProfissionalIds[0])?.name 
+                    : `${selectedProfissionalIds.length} selecionados`}
+                </span>
+              </div>
+              <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isProfDropdownOpen && "rotate-90")} />
+            </button>
+            
+            <AnimatePresence>
+              {isProfDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsProfDropdownOpen(false)} />
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 mt-2 w-full bg-white border border-zinc-200 rounded-2xl shadow-xl z-50 p-2 max-h-64 overflow-y-auto"
+                  >
+                    <button 
+                      onClick={() => {
+                        if (selectedProfissionalIds.length === profissionais.length) {
+                          setSelectedProfissionalIds([profissionais[0].id]);
+                        } else {
+                          setSelectedProfissionalIds(profissionais.map(p => p.id));
+                        }
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-50 mb-1"
+                    >
+                      {selectedProfissionalIds.length === profissionais.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                    </button>
+                    {profissionais.map(p => (
+                      <label key={p.id} className="flex items-center gap-3 px-3 py-2 hover:bg-zinc-50 rounded-lg cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={selectedProfissionalIds.includes(p.id)}
+                          onChange={() => {
+                            setSelectedProfissionalIds(prev => 
+                              prev.includes(p.id) 
+                                ? (prev.length > 1 ? prev.filter(id => id !== p.id) : prev) 
+                                : [...prev, p.id]
+                            );
+                          }}
+                          className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="text-sm font-medium text-zinc-700">{p.name}</span>
+                      </label>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
           
           <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
@@ -502,7 +612,7 @@ export default function BusinessHoursPage() {
           <p className="text-amber-800/80 text-sm mt-1 leading-relaxed">
             Use o <strong>Calendário</strong> para datas específicas (feriados, promoções ou folgas). 
             O <strong>Horário Padrão</strong> serve como base para todos os dias que não possuem uma exceção definida no calendário.
-            Você pode vincular serviços específicos a horários promocionais para atrair mais clientes em horários de baixa procura.
+            <strong>Dica:</strong> Você pode selecionar vários profissionais ao mesmo tempo no topo da página para aplicar o mesmo horário a todos de uma vez só!
           </p>
         </div>
       </div>
