@@ -1,8 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
-import { initializeApp } from 'firebase/app';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,20 +9,15 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Hardcoded config to match src/services/firebase.ts
-const firebaseConfig = {
-  apiKey: "AIzaSyBpnKkcq_g2CYBaCEq2cFujKcElHtdkxXc",
-  authDomain: "irisagenda-b6e66.firebaseapp.com",
-  projectId: "irisagenda-b6e66",
-  storageBucket: "irisagenda-b6e66.firebasestorage.app",
-  messagingSenderId: "93194618911",
-  appId: "1:93194618911:web:47980aa43241bfa00b6d2a",
-  measurementId: "G-RZJYD594L9"
-};
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: "irisagenda-b6e66",
+    storageBucket: "irisagenda-b6e66.firebasestorage.app"
+  });
+}
 
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const storage = getStorage(firebaseApp);
+const bucket = admin.storage().bucket();
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -36,29 +30,33 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
 
-  // API Route for Upload (Bypasses CORS)
+  // API Route for Upload (Bypasses CORS and Security Rules)
   app.post('/api/upload', upload.single('file'), async (req, res) => {
     try {
       const { path: storagePath } = req.body;
       
-      if (!storagePath) {
-        return res.status(400).json({ error: 'Caminho de destino não fornecido' });
+      if (!storagePath || !req.file) {
+        return res.status(400).json({ error: 'Dados incompletos' });
       }
 
-      if (!req.file) {
-        return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-      }
+      const blob = bucket.file(storagePath);
+      const blobStream = blob.createWriteStream({
+        metadata: {
+          contentType: req.file.mimetype,
+        },
+        resumable: false
+      });
 
-      const storageRef = ref(storage, storagePath);
-      const metadata = {
-        contentType: req.file.mimetype,
-      };
+      await new Promise((resolve, reject) => {
+        blobStream.on('error', reject);
+        blobStream.on('finish', resolve);
+        blobStream.end(req.file?.buffer);
+      });
 
-      // Upload the buffer
-      const snapshot = await uploadBytes(storageRef, req.file.buffer, metadata);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      await blob.makePublic();
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
-      res.status(200).json({ url: downloadURL });
+      res.status(200).json({ url: publicUrl });
     } catch (error: any) {
       console.error('Server Upload Error:', error);
       res.status(500).json({ error: error.message || 'Erro interno no servidor' });
