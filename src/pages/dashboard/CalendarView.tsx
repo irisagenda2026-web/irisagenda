@@ -542,18 +542,16 @@ export default function CalendarView() {
             onClose={() => setIsApptModalOpen(false)} 
             selectedDate={selectedDate}
             servicos={servicos}
-            profissionais={role === 'profissional' && currentProfissional ? [currentProfissional] : profissionais}
+            profissionais={profissionais}
             onSuccess={loadData}
-            empresaId={user?.empresaId}
           />
         )}
         {isBlockModalOpen && (
           <NewBlockModal 
             onClose={() => setIsBlockModalOpen(false)} 
             selectedDate={selectedDate}
-            profissionais={role === 'profissional' && currentProfissional ? [currentProfissional] : profissionais}
+            profissionais={profissionais}
             onSuccess={loadData}
-            empresaId={user?.empresaId}
           />
         )}
         {isServiceModalOpen && (
@@ -561,7 +559,6 @@ export default function CalendarView() {
             onClose={() => setIsServiceModalOpen(false)} 
             servicos={servicos}
             onSuccess={loadData}
-            empresaId={user?.empresaId}
           />
         )}
       </AnimatePresence>
@@ -571,7 +568,7 @@ export default function CalendarView() {
 
 // --- Modals Components ---
 
-function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSuccess, empresaId }: any) {
+function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     clienteName: '',
@@ -582,7 +579,8 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empresaId || !formData.servicoId) return;
+    const user = auth.currentUser;
+    if (!user || !formData.servicoId) return;
 
     setLoading(true);
     try {
@@ -599,7 +597,7 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         : (servico.commissionValue || 0);
 
       await createAgendamento({
-        empresaId: empresaId,
+        empresaId: user.uid,
         clienteId: 'guest',
         clienteName: formData.clienteName,
         clientePhone: '',
@@ -722,7 +720,7 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
   );
 }
 
-function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess, empresaId }: any) {
+function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     reason: '',
@@ -733,7 +731,8 @@ function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess, empres
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empresaId || !formData.profissionalId) return;
+    const user = auth.currentUser;
+    if (!user || !formData.profissionalId) return;
 
     setLoading(true);
     try {
@@ -747,7 +746,7 @@ function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess, empres
       endTime.setHours(eh, em, 0, 0);
 
       await createBloqueio({
-        empresaId: empresaId,
+        empresaId: user.uid,
         profissionalId: formData.profissionalId,
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
@@ -846,7 +845,7 @@ function NewBlockModal({ onClose, selectedDate, profissionais, onSuccess, empres
   );
 }
 
-function ServicesModal({ onClose, servicos, onSuccess, empresaId }: any) {
+function ServicesModal({ onClose, servicos, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
@@ -859,12 +858,13 @@ function ServicesModal({ onClose, servicos, onSuccess, empresaId }: any) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empresaId) return;
+    const user = auth.currentUser;
+    if (!user) return;
 
     setLoading(true);
     try {
       await addServico({
-        empresaId: empresaId,
+        empresaId: user.uid,
         name: formData.name,
         description: '',
         price: Number(formData.price),

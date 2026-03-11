@@ -31,21 +31,22 @@ import { cn } from '@/src/utils/cn';
 import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function FinanceDashboard() {
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      if (user?.empresaId) {
-        const data = await getAllAgendamentos(user.empresaId);
+      const user = auth.currentUser;
+      if (user) {
+        const data = await getAllAgendamentos(user.uid);
         setAgendamentos(data);
       }
       setIsLoading(false);
     };
     loadData();
-  }, [user?.empresaId]);
+  }, []);
 
   const stats = {
     totalRevenue: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? curr.totalPrice : 0), 0),

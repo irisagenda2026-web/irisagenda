@@ -10,24 +10,22 @@ import { auth } from '@/src/services/firebase';
 import { getAllAgendamentos } from '@/src/services/db';
 import { Agendamento } from '@/src/types/firebase';
 
-import { useAuth } from '@/src/contexts/AuthContext';
-
 export default function ClientesPage() {
-  const { user } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      if (user?.empresaId) {
-        const data = await getAllAgendamentos(user.empresaId);
+      const user = auth.currentUser;
+      if (user) {
+        const data = await getAllAgendamentos(user.uid);
         setAgendamentos(data);
       }
       setIsLoading(false);
     };
     loadData();
-  }, [user?.empresaId]);
+  }, []);
 
   // Extract unique customers from appointments
   const clientesMap = new Map();
