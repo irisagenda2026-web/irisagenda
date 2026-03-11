@@ -127,6 +127,34 @@ export default function PublicSite() {
       
       const endTime = new Date(startTime.getTime() + selectedService.durationMinutes * 60000);
 
+      // FINAL VALIDATION: Check for overlaps one last time before saving
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const profId = selectedProfissional?.id || 'default';
+
+      const [existingAgs, existingBls] = await Promise.all([
+        getAgendamentos(empresa.id, startOfDay.getTime(), endOfDay.getTime()),
+        getBloqueios(empresa.id, profId, startOfDay.getTime(), endOfDay.getTime())
+      ]);
+
+      const profAgs = existingAgs.filter(a => a.profissionalId === profId);
+      
+      const hasOverlap = profAgs.some(ag => {
+        return startTime.getTime() < ag.endTime && endTime.getTime() > ag.startTime;
+      }) || existingBls.some(bl => {
+        return startTime.getTime() < bl.endTime && endTime.getTime() > bl.startTime;
+      });
+
+      if (hasOverlap) {
+        alert('Este horário acabou de ser ocupado. Por favor, escolha outro horário.');
+        setIsSubmitting(false);
+        setStep('datetime');
+        return;
+      }
+
       const commissionAmount = selectedService.commissionType === 'percentage' 
         ? (selectedService.price * (selectedService.commissionValue || 0)) / 100 
         : (selectedService.commissionValue || 0);
@@ -138,7 +166,7 @@ export default function PublicSite() {
         clientePhone: customerInfo.phone,
         servicoId: selectedService.id,
         servicoName: selectedService.name,
-        profissionalId: selectedProfissional?.id || 'default',
+        profissionalId: profId,
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'pending',

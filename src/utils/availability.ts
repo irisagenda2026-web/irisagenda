@@ -78,13 +78,21 @@ export function generateTimeSlots(
 
   // 3. Filter out slots that overlap with appointments or blocks
   const checkOverlap = (slotStartMins: number, slotEndMins: number) => {
+    // Normalize date for comparison (midnight)
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+
     // Check agendamentos
     for (const ag of agendamentos) {
       const agStart = new Date(ag.startTime);
       const agEnd = new Date(ag.endTime);
       
+      // Normalize agStart for comparison
+      const agDate = new Date(agStart);
+      agDate.setHours(0, 0, 0, 0);
+      
       // Only check same day
-      if (agStart.getDate() === date.getDate() && agStart.getMonth() === date.getMonth() && agStart.getFullYear() === date.getFullYear()) {
+      if (agDate.getTime() === compareDate.getTime()) {
         const agStartMins = agStart.getHours() * 60 + agStart.getMinutes();
         const agEndMins = agEnd.getHours() * 60 + agEnd.getMinutes();
 
@@ -100,8 +108,11 @@ export function generateTimeSlots(
       const blStart = new Date(bl.startTime);
       const blEnd = new Date(bl.endTime);
       
+      const blDate = new Date(blStart);
+      blDate.setHours(0, 0, 0, 0);
+      
       // Only check same day
-      if (blStart.getDate() === date.getDate() && blStart.getMonth() === date.getMonth() && blStart.getFullYear() === date.getFullYear()) {
+      if (blDate.getTime() === compareDate.getTime()) {
         const blStartMins = blStart.getHours() * 60 + blStart.getMinutes();
         const blEndMins = blEnd.getHours() * 60 + blEnd.getMinutes();
 

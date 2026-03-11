@@ -573,9 +573,11 @@ import { generateTimeSlots, TimeSlot } from '@/src/utils/availability';
 import { getAvailabilityOverrides } from '@/src/services/db';
 
 function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSuccess }: any) {
+  const { user: authUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     clienteName: '',
@@ -586,12 +588,9 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
 
   useEffect(() => {
     const fetchAvailability = async () => {
-      if (!formData.profissionalId || !formData.servicoId) return;
+      if (!formData.profissionalId || !formData.servicoId || !authUser?.empresaId) return;
       setLoadingSlots(true);
       
-      const user = auth.currentUser;
-      if (!user) return;
-
       const start = new Date(selectedDate);
       start.setHours(0, 0, 0, 0);
       const end = new Date(selectedDate);
@@ -603,10 +602,10 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         const monthStr = `${year}-${month}`;
 
         const [agData, blData, bhData, ovData] = await Promise.all([
-          getAgendamentos(user.uid, start.getTime(), end.getTime()),
-          getBloqueios(user.uid, formData.profissionalId, start.getTime(), end.getTime()),
-          getBusinessHours(user.uid, formData.profissionalId),
-          getAvailabilityOverrides(user.uid, formData.profissionalId, monthStr)
+          getAgendamentos(authUser.empresaId, start.getTime(), end.getTime()),
+          getBloqueios(authUser.empresaId, formData.profissionalId, start.getTime(), end.getTime()),
+          getBusinessHours(authUser.empresaId, formData.profissionalId),
+          getAvailabilityOverrides(authUser.empresaId, formData.profissionalId, monthStr)
         ]);
 
         const servico = servicos.find((s: any) => s.id === formData.servicoId);
@@ -648,8 +647,8 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = auth.currentUser;
-    if (!user || !formData.servicoId || !formData.hour) return;
+    setError('');
+    if (!authUser?.empresaId || !formData.servicoId || !formData.hour) return;
 
     setLoading(true);
     try {
@@ -661,12 +660,37 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
       
       const endTime = new Date(startTime.getTime() + (servico.durationMinutes * 60000));
 
+      // FINAL VALIDATION: Check for overlaps one last time before saving
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const [existingAgs, existingBls] = await Promise.all([
+        getAgendamentos(authUser.empresaId, startOfDay.getTime(), endOfDay.getTime()),
+        getBloqueios(authUser.empresaId, formData.profissionalId, startOfDay.getTime(), endOfDay.getTime())
+      ]);
+
+      const profAgs = existingAgs.filter(a => a.profissionalId === formData.profissionalId);
+      
+      const hasOverlap = profAgs.some(ag => {
+        return startTime.getTime() < ag.endTime && endTime.getTime() > ag.startTime;
+      }) || existingBls.some(bl => {
+        return startTime.getTime() < bl.endTime && endTime.getTime() > bl.startTime;
+      });
+
+      if (hasOverlap) {
+        setError('Este horário já foi ocupado por outro agendamento ou bloqueio. Por favor, escolha outro horário.');
+        setLoading(false);
+        return;
+      }
+
       const commissionAmount = servico.commissionType === 'percentage' 
         ? (servico.price * (servico.commissionValue || 0)) / 100 
         : (servico.commissionValue || 0);
 
       await createAgendamento({
-        empresaId: user.uid,
+        empresaId: authUser.empresaId,
         clienteId: 'guest',
         clienteName: formData.clienteName,
         clientePhone: '',
@@ -711,6 +735,12 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm flex items-start gap-3 border border-red-100">
+              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+              <p>{error}</p>
+            </div>
+          )}
           {servicos.length === 0 ? (
             <div className="bg-amber-50 text-amber-700 p-4 rounded-xl text-sm flex items-start gap-3 border border-amber-100">
               <AlertCircle size={18} className="shrink-0 mt-0.5" />
