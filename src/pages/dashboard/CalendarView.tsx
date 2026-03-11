@@ -577,17 +577,6 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
     hour: '09:00'
   });
 
-  const selectedServico = servicos.find((s: any) => s.id === formData.servicoId);
-  const availableProfissionais = profissionais.filter((p: any) => 
-    !selectedServico || !selectedServico.profissionaisIds || selectedServico.profissionaisIds.length === 0 || selectedServico.profissionaisIds.includes(p.id)
-  );
-
-  useEffect(() => {
-    if (availableProfissionais.length > 0 && !availableProfissionais.find((p: any) => p.id === formData.profissionalId)) {
-      setFormData(prev => ({ ...prev, profissionalId: availableProfissionais[0].id }));
-    }
-  }, [formData.servicoId, availableProfissionais]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
@@ -694,10 +683,10 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
                   onChange={e => setFormData({...formData, profissionalId: e.target.value})}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
-                  {availableProfissionais.length === 0 ? (
-                    <option value="default">Nenhum profissional disponível para este serviço</option>
+                  {profissionais.length === 0 ? (
+                    <option value="default">Lavínia Corrêa (Padrão)</option>
                   ) : (
-                    availableProfissionais.map((p: any) => (
+                    profissionais.map((p: any) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))
                   )}
@@ -717,8 +706,8 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
 
               <button 
                 type="submit"
-                disabled={loading || availableProfissionais.length === 0}
-                className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+                className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mt-2"
               >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
                 Confirmar Agendamento
