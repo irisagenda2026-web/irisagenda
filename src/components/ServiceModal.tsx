@@ -61,11 +61,7 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
       setFormData(prev => ({ ...prev, imageUrl: url }));
     } catch (error: any) {
       console.error(error);
-      if (onCorsError && (error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown')) {
-        onCorsError();
-      } else {
-        alert('Erro ao fazer upload da imagem.');
-      }
+      alert('Erro ao fazer upload da imagem: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploading(false);
     }

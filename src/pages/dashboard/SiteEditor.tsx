@@ -182,11 +182,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
       await updateEmpresa(empresa.id, { logoUrl: url });
     } catch (error: any) {
       console.error(error);
-      if (error.message?.includes('Timeout') || error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
-        onCorsError();
-      } else {
-        alert('Erro ao enviar logo: ' + (error.message || 'Erro desconhecido'));
-      }
+      alert('Erro ao enviar logo: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploadingLogo(false);
     }
@@ -204,11 +200,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
       await updateEmpresa(empresa.id, { coverUrl: url });
     } catch (error: any) {
       console.error(error);
-      if (error.message?.includes('Timeout') || error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
-        onCorsError();
-      } else {
-        alert('Erro ao enviar capa: ' + (error.message || 'Erro desconhecido'));
-      }
+      alert('Erro ao enviar capa: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploadingCover(false);
     }
@@ -226,11 +218,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
       await updateEmpresa(empresa.id, { faviconUrl: url });
     } catch (error: any) {
       console.error(error);
-      if (error.message?.includes('Timeout') || error.message?.includes('network') || error.message?.includes('CORS') || error.code === 'storage/unknown') {
-        onCorsError();
-      } else {
-        alert('Erro ao enviar favicon: ' + (error.message || 'Erro desconhecido'));
-      }
+      alert('Erro ao enviar favicon: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploadingFavicon(false);
     }
@@ -542,11 +530,7 @@ function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | 
       await updateEmpresa(empresa.id, { gallery: newGallery });
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes('Timeout') || err.message?.includes('network') || err.message?.includes('CORS') || err.code === 'storage/unknown') {
-        onCorsError();
-      } else {
-        alert('Erro ao fazer upload da imagem: ' + (err.message || 'Erro desconhecido'));
-      }
+      alert('Erro ao fazer upload da imagem: ' + (err.message || 'Erro desconhecido'));
     } finally {
       setIsUploading(false);
     }

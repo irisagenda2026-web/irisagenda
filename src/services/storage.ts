@@ -2,22 +2,25 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { storage } from './firebase';
 
 export const uploadImage = async (path: string, file: File) => {
-  const storageRef = ref(storage, path);
-  
-  // Create a timeout promise
-  const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error('Timeout: O upload está demorando muito. Verifique sua conexão ou as configurações de CORS.')), 15000)
-  );
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('path', path);
 
   try {
-    const uploadPromise = (async () => {
-      const snapshot = await uploadBytes(storageRef, file);
-      return await getDownloadURL(snapshot.ref);
-    })();
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
 
-    // Race between upload and timeout
-    return await Promise.race([uploadPromise, timeoutPromise]) as string;
-  } catch (error) {
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Erro no upload via servidor');
+    }
+
+    const data = await response.json();
+    return data.url as string;
+  } catch (error: any) {
+    console.error('Upload Proxy Error:', error);
     throw error;
   }
 };
