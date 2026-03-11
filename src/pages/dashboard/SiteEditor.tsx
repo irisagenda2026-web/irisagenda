@@ -12,7 +12,7 @@ import CorsErrorModal from '@/src/components/CorsErrorModal';
 import ServiceModal from '@/src/components/ServiceModal';
 
 export default function SiteEditor() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [activeTab, setActiveTab] = useState<'info' | 'services' | 'gallery'>('info');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,15 +21,14 @@ export default function SiteEditor() {
 
   useEffect(() => {
     const loadData = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const data = await getEmpresa(user.uid);
+      if (user?.empresaId) {
+        const data = await getEmpresa(user.empresaId);
         setEmpresa(data);
       }
       setIsLoading(false);
     };
     loadData();
-  }, []);
+  }, [user?.empresaId]);
 
   const handleSave = async () => {
     if (!empresa) return;
