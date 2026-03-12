@@ -83,6 +83,13 @@ export default function MainDashboard() {
         }
         return acc + curr.totalPrice;
       }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 
+      subValue: role === 'empresa' ? `Líquido: R$ ${agendamentos.reduce((acc, curr) => {
+        if (curr.status !== 'completed' && curr.status !== 'confirmed') return acc;
+        const s = servicos.find(s => s.id === curr.servicoId);
+        if (!s) return acc + curr.totalPrice;
+        const comm = curr.commissionAmount ?? calculateCommission(curr.totalPrice, s, curr.profissionalId).amount;
+        return acc + (curr.totalPrice - comm);
+      }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : undefined,
       icon: DollarSign, 
       color: 'text-emerald-600', 
       bg: 'bg-emerald-50' 
@@ -130,6 +137,12 @@ export default function MainDashboard() {
               </div>
               <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">{stat.label}</p>
               <h3 className="text-2xl font-black text-zinc-900 tracking-tight">{stat.value}</h3>
+              {stat.subValue && (
+                <p className="text-xs font-bold text-emerald-600 mt-1 flex items-center gap-1">
+                  <ArrowUpRight size={12} />
+                  {stat.subValue}
+                </p>
+              )}
             </motion.div>
           ))}
         </div>

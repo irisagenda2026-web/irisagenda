@@ -75,6 +75,13 @@ export default function FinanceDashboard() {
       const comm = calculateCommission(curr.totalPrice, s, profId);
       return acc + comm.amount;
     }, 0),
+    totalNet: agendamentos.reduce((acc, curr) => {
+      if (curr.status !== 'completed' && curr.status !== 'confirmed') return acc;
+      const s = servicos.find(s => s.id === curr.servicoId);
+      if (!s) return acc + curr.totalPrice;
+      const comm = curr.commissionAmount ?? calculateCommission(curr.totalPrice, s, curr.profissionalId).amount;
+      return acc + (curr.totalPrice - comm);
+    }, 0),
     totalAppointments: agendamentos.length,
     completedAppointments: agendamentos.filter(a => a.status === 'completed').length,
     averageTicket: agendamentos.length > 0 ? agendamentos.reduce((acc, curr) => acc + curr.totalPrice, 0) / agendamentos.length : 0
@@ -148,6 +155,11 @@ export default function FinanceDashboard() {
                     ? `R$ ${(isProf ? stats.totalCommission : stats.totalRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
                     : '••••••'}
                 </h2>
+                {!isProf && showBalance && (
+                  <p className="text-xs font-bold text-emerald-600 mt-1">
+                    Líquido: R$ {stats.totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">Liberado para saque</span>
                 </div>
@@ -164,16 +176,16 @@ export default function FinanceDashboard() {
               trendUp={true} 
             />
             <StatCard 
-              label={isProf ? "Ganhos Totais" : "Comissões"} 
-              value={`R$ ${stats.totalCommission.toFixed(2)}`} 
-              icon={Users} 
+              label={isProf ? "Ganhos Totais" : "Lucro Líquido"} 
+              value={`R$ ${(isProf ? stats.totalCommission : stats.totalNet).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} 
+              icon={TrendingUp} 
               trend="+12%" 
               trendUp={true} 
             />
             <StatCard 
               label="Ticket Médio" 
-              value={`R$ ${stats.averageTicket.toFixed(2)}`} 
-              icon={TrendingUp} 
+              value={`R$ ${stats.averageTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} 
+              icon={DollarSign} 
               trend="-2%" 
               trendUp={false} 
               className="col-span-2 md:col-span-1"
