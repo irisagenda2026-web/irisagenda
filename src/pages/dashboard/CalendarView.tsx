@@ -109,7 +109,7 @@ export default function CalendarView() {
 
   // Math for availability
   const getDayMinutes = () => {
-    if (!businessHours) return 12 * 60; // Default 12h
+    if (!businessHours) return 0; // Default to 0 if not configured
     const dayOfWeek = selectedDate.getDay().toString();
     const dayConfig = businessHours[dayOfWeek];
     if (!dayConfig || !dayConfig.isOpen) return 0;

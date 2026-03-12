@@ -47,12 +47,12 @@ export default function PublicSite() {
 
   const DEFAULT_BUSINESS_HOURS = {
     '0': { isOpen: false, slots: [] },
-    '1': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
-    '2': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
-    '3': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
-    '4': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
-    '5': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
-    '6': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }] },
+    '1': { isOpen: false, slots: [] },
+    '2': { isOpen: false, slots: [] },
+    '3': { isOpen: false, slots: [] },
+    '4': { isOpen: false, slots: [] },
+    '5': { isOpen: false, slots: [] },
+    '6': { isOpen: false, slots: [] },
   };
 
   useEffect(() => {
@@ -104,9 +104,8 @@ export default function PublicSite() {
         setExistingAgendamentos(ags.filter(a => a.profissionalId === selectedProfissional.id));
         setExistingBloqueios(bls);
         
-        // Robust business hours fallback
-        const hasValidHours = hours && Object.keys(hours).length > 0 && Object.values(hours).some((day: any) => day.isOpen);
-        setBusinessHours(hasValidHours ? hours : DEFAULT_BUSINESS_HOURS);
+        // Use configured hours or default to closed
+        setBusinessHours(hours || DEFAULT_BUSINESS_HOURS);
         
         setAvailabilityOverrides(overrides);
         setIsLoadingSlots(false);
