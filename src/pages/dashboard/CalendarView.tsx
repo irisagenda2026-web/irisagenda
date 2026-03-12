@@ -10,10 +10,11 @@ import { auth } from '@/src/services/firebase';
 import { 
   getAgendamentos, createAgendamento, getServicos, addServico, 
   getBloqueios, createBloqueio, deleteBloqueio, getProfissionais, getBusinessHours,
-  updateAgendamentoStatus, calculateCommission
+  updateAgendamentoStatus, calculateCommission, getAvailabilityOverrides
 } from '@/src/services/db';
-import { Agendamento, Servico, Bloqueio, Profissional } from '@/src/types/firebase';
+import { Agendamento, Servico, Bloqueio, Profissional, AvailabilityOverride } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { format } from 'date-fns';
 
 export default function CalendarView() {
   const { role, user } = useAuth();
@@ -22,6 +23,7 @@ export default function CalendarView() {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [businessHours, setBusinessHours] = useState<any>(null);
+  const [overrides, setOverrides] = useState<AvailabilityOverride[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
@@ -63,12 +65,15 @@ export default function CalendarView() {
         }
       }
 
-      const [agData, blData, svData, profData, bhData] = await Promise.all([
+      const month = format(selectedDate, 'yyyy-MM');
+
+      const [agData, blData, svData, profData, bhData, ovData] = await Promise.all([
         getAgendamentos(user.empresaId, start.getTime(), end.getTime()),
         getBloqueios(user.empresaId, profIdToFilter, start.getTime(), end.getTime()),
         getServicos(user.empresaId),
         getProfissionais(user.empresaId),
-        getBusinessHours(user.empresaId, profIdToFilter || 'default')
+        getBusinessHours(user.empresaId, profIdToFilter || 'default'),
+        getAvailabilityOverrides(user.empresaId, profIdToFilter || 'default', month)
       ]);
       
       setAgendamentos(agData);
@@ -76,6 +81,7 @@ export default function CalendarView() {
       setServicos(svData);
       setProfissionais(profData);
       setBusinessHours(bhData);
+      setOverrides(ovData);
     }
     setIsLoading(false);
   };
@@ -109,8 +115,21 @@ export default function CalendarView() {
 
   // Math for availability
   const getDayMinutes = () => {
-    if (!businessHours) return 0; // Default to 0 if not configured
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const dayOfWeek = selectedDate.getDay().toString();
+    
+    const override = overrides.find(o => o.date === dateStr);
+    
+    if (override) {
+      if (!override.isOpen) return 0;
+      return override.slots.reduce((acc: number, slot: any) => {
+        const [sh, sm] = slot.start.split(':').map(Number);
+        const [eh, em] = slot.end.split(':').map(Number);
+        return acc + ((eh * 60 + em) - (sh * 60 + sm));
+      }, 0);
+    }
+
+    if (!businessHours) return 0;
     const dayConfig = businessHours[dayOfWeek];
     if (!dayConfig || !dayConfig.isOpen) return 0;
     
@@ -645,7 +664,6 @@ export default function CalendarView() {
 // --- Modals Components ---
 
 import { generateTimeSlots, TimeSlot } from '@/src/utils/availability';
-import { getAvailabilityOverrides } from '@/src/services/db';
 
 function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSuccess }: any) {
   const { user: authUser } = useAuth();

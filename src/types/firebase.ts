@@ -32,6 +32,7 @@ export interface Empresa {
     primaryColor: string;
     secondaryColor: string;
     showReviews: boolean;
+    visibilityDays?: number; // Number of days visible in the calendar
   };
   gallery?: string[];
   createdAt: number;

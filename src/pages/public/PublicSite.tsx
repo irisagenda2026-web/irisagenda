@@ -14,7 +14,8 @@ import {
   User,
   ImageIcon
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays, startOfDay, isSameDay as isSameDayDate } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { cn } from '@/src/utils/cn';
 import { getEmpresaBySlug, getServicos, createAgendamento, getAgendamentos, getBloqueios, getReviews, addReview, getProfissionais, getBusinessHours, getAvailabilityOverrides } from '@/src/services/db';
 import { Empresa, Servico, Agendamento, Bloqueio, Review, Profissional, AvailabilityOverride } from '@/src/types/firebase';
@@ -86,29 +87,32 @@ export default function PublicSite() {
     const loadSlots = async () => {
       if (empresa && selectedDate && selectedProfissional) {
         setIsLoadingSlots(true);
-        const start = new Date(selectedDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(selectedDate);
+        const start = startOfDay(selectedDate);
+        const end = new Date(start);
         end.setHours(23, 59, 59, 999);
         
         const month = format(selectedDate, 'yyyy-MM');
         
-        const [ags, bls, hours, overrides] = await Promise.all([
-          getAgendamentos(empresa.id, start.getTime(), end.getTime()),
-          getBloqueios(empresa.id, selectedProfissional.id, start.getTime(), end.getTime()),
-          getBusinessHours(empresa.id, selectedProfissional.id),
-          getAvailabilityOverrides(empresa.id, selectedProfissional.id, month)
-        ]);
-        
-        // Filter agendamentos for this professional
-        setExistingAgendamentos(ags.filter(a => a.profissionalId === selectedProfissional.id));
-        setExistingBloqueios(bls);
-        
-        // Use configured hours or default to closed
-        setBusinessHours(hours || DEFAULT_BUSINESS_HOURS);
-        
-        setAvailabilityOverrides(overrides);
-        setIsLoadingSlots(false);
+        try {
+          const [ags, bls, hours, overrides] = await Promise.all([
+            getAgendamentos(empresa.id, start.getTime(), end.getTime()),
+            getBloqueios(empresa.id, selectedProfissional.id, start.getTime(), end.getTime()),
+            getBusinessHours(empresa.id, selectedProfissional.id),
+            getAvailabilityOverrides(empresa.id, selectedProfissional.id, month)
+          ]);
+          
+          // Filter agendamentos for this professional
+          setExistingAgendamentos(ags.filter(a => a.profissionalId === selectedProfissional.id));
+          setExistingBloqueios(bls);
+          
+          // Use configured hours or default to closed
+          setBusinessHours(hours || DEFAULT_BUSINESS_HOURS);
+          setAvailabilityOverrides(overrides);
+        } catch (error) {
+          console.error("Error loading slots:", error);
+        } finally {
+          setIsLoadingSlots(false);
+        }
       }
     };
     loadSlots();
@@ -487,14 +491,14 @@ export default function PublicSite() {
                 </button>
                 
                 <div>
-                  <h2 className="text-xl font-bold text-zinc-900 mb-4">Selecione o horário</h2>
+                  <h2 className="text-xl font-bold text-zinc-900 mb-1">Selecione o horário</h2>
+                  <p className="text-sm text-zinc-500 mb-4">Com {selectedProfissional?.name}</p>
                   
                   {/* Simple Date Selector */}
                   <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {Array.from({ length: 7 }).map((_, i) => {
-                      const date = new Date();
-                      date.setDate(date.getDate() + i);
-                      const isSelected = date.toDateString() === selectedDate.toDateString();
+                    {Array.from({ length: empresa?.settings?.visibilityDays || 14 }).map((_, i) => {
+                      const date = startOfDay(addDays(new Date(), i));
+                      const isSelected = isSameDayDate(date, selectedDate);
                       
                       return (
                         <button
@@ -508,9 +512,9 @@ export default function PublicSite() {
                           )}
                         >
                           <span className="text-[10px] uppercase font-bold opacity-70">
-                            {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                            {format(date, 'eee', { locale: ptBR }).replace('.', '')}
                           </span>
-                          <span className="text-lg font-bold">{date.getDate()}</span>
+                          <span className="text-lg font-bold">{format(date, 'dd')}</span>
                         </button>
                       );
                     })}

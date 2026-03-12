@@ -346,15 +346,33 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-zinc-700">Endereço</label>
-          <input 
-            type="text" 
-            value={empresa.address}
-            onChange={e => setEmpresa({ ...empresa, address: e.target.value })}
-            placeholder="Rua das Flores, 123 - São Paulo"
-            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-          />
+          <label className="text-sm font-semibold text-zinc-700">Visibilidade do Calendário (Dias)</label>
+          <div className="flex items-center gap-3">
+            <input 
+              type="number" 
+              min={1}
+              max={60}
+              value={empresa.settings.visibilityDays || 14}
+              onChange={e => setEmpresa({ 
+                ...empresa, 
+                settings: { ...empresa.settings, visibilityDays: parseInt(e.target.value) } 
+              })}
+              className="w-24 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold"
+            />
+            <span className="text-xs text-zinc-500">Quantos dias o cliente pode ver no futuro.</span>
+          </div>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-zinc-700">Endereço</label>
+        <input 
+          type="text" 
+          value={empresa.address}
+          onChange={e => setEmpresa({ ...empresa, address: e.target.value })}
+          placeholder="Rua das Flores, 123 - São Paulo"
+          className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+        />
       </div>
     </form>
   );

@@ -1,4 +1,5 @@
 import { Agendamento, Bloqueio, AvailabilityOverride } from '../types/firebase';
+import { format, isSameDay, startOfDay } from 'date-fns';
 
 export interface TimeSlot {
   time: string; // HH:mm
@@ -16,11 +17,9 @@ export function generateTimeSlots(
   intervalMinutes: number = 30
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
-  // Format date as YYYY-MM-DD in local time
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`;
+  
+  // Use date-fns for consistent date string generation (local time)
+  const dateStr = format(date, 'yyyy-MM-dd');
   const dayOfWeek = date.getDay().toString();
 
   // 1. Determine working hours for the day
@@ -31,8 +30,14 @@ export function generateTimeSlots(
   
   if (override) {
     isWorkingDay = override.isOpen;
-    if (isWorkingDay && override.slots) {
+    if (isWorkingDay && override.slots && override.slots.length > 0) {
       workingSlots = override.slots;
+    } else if (isWorkingDay) {
+      // If marked open but no slots, fallback to standard hours for that day
+      const standardDay = businessHours?.[dayOfWeek];
+      if (standardDay && standardDay.isOpen && standardDay.slots) {
+        workingSlots = standardDay.slots;
+      }
     }
   } else if (businessHours && businessHours[dayOfWeek]) {
     isWorkingDay = businessHours[dayOfWeek].isOpen;
@@ -87,12 +92,8 @@ export function generateTimeSlots(
       const agStart = new Date(ag.startTime);
       const agEnd = new Date(ag.endTime);
       
-      // Normalize agStart for comparison
-      const agDate = new Date(agStart);
-      agDate.setHours(0, 0, 0, 0);
-      
       // Only check same day
-      if (agDate.getTime() === compareDate.getTime()) {
+      if (isSameDay(agStart, date)) {
         const agStartMins = agStart.getHours() * 60 + agStart.getMinutes();
         const agEndMins = agEnd.getHours() * 60 + agEnd.getMinutes();
 
@@ -108,11 +109,8 @@ export function generateTimeSlots(
       const blStart = new Date(bl.startTime);
       const blEnd = new Date(bl.endTime);
       
-      const blDate = new Date(blStart);
-      blDate.setHours(0, 0, 0, 0);
-      
       // Only check same day
-      if (blDate.getTime() === compareDate.getTime()) {
+      if (isSameDay(blStart, date)) {
         const blStartMins = blStart.getHours() * 60 + blStart.getMinutes();
         const blEndMins = blEnd.getHours() * 60 + blEnd.getMinutes();
 
@@ -124,7 +122,7 @@ export function generateTimeSlots(
 
     // Check if slot is in the past (if today)
     const now = new Date();
-    if (date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+    if (isSameDay(date, now)) {
       const nowMins = now.getHours() * 60 + now.getMinutes();
       if (slotStartMins <= nowMins) {
         return true; // Overlaps with the past
