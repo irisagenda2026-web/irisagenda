@@ -25,16 +25,15 @@ import {
   Area
 } from 'recharts';
 import { auth } from '@/src/services/firebase';
-import { getAllAgendamentos, getProfissionais, getServicos } from '@/src/services/db';
+import { getAllAgendamentos, getProfissionais, getServicos, calculateCommission } from '@/src/services/db';
 import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
 import { cn } from '@/src/utils/cn';
 import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function FinanceDashboard() {
-  const { role, user } = useAuth();
+  const { role, user, profissional: currentProf } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
-  const [currentProf, setCurrentProf] = useState<Profissional | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
 
@@ -48,15 +47,9 @@ export default function FinanceDashboard() {
         setServicos(svData);
         
         if (role === 'profissional') {
-          const profs = await getProfissionais(user.empresaId);
-          const myProf = profs.find(p => p.userId === auth.currentUser?.uid) ||
-                         profs.find(p => p.email?.toLowerCase() === auth.currentUser?.email?.toLowerCase());
-          
-          if (myProf) {
-            setCurrentProf(myProf);
-            setAgendamentos(agData.filter(a => a.profissionalId === myProf.id));
+          if (currentProf) {
+            setAgendamentos(agData.filter(a => a.profissionalId === currentProf.id));
           } else {
-            console.warn("Professional record not found for user:", auth.currentUser?.uid);
             setAgendamentos([]);
           }
         } else {
@@ -66,7 +59,7 @@ export default function FinanceDashboard() {
       setIsLoading(false);
     };
     loadData();
-  }, [user?.empresaId, role]);
+  }, [user?.empresaId, role, currentProf]);
 
   const stats = {
     totalRevenue: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? curr.totalPrice : 0), 0),
@@ -79,10 +72,8 @@ export default function FinanceDashboard() {
       if (!s || (role === 'profissional' && !currentProf)) return acc;
       
       const profId = role === 'profissional' ? currentProf!.id : curr.profissionalId;
-      const profComm = s.professionalCommissions?.[profId];
-      const type = profComm?.type || s.commissionType || 'percentage';
-      const val = profComm?.value ?? s.commissionValue ?? 0;
-      return acc + (type === 'percentage' ? (curr.totalPrice * val) / 100 : val);
+      const comm = calculateCommission(curr.totalPrice, s, profId);
+      return acc + comm.amount;
     }, 0),
     totalAppointments: agendamentos.length,
     completedAppointments: agendamentos.filter(a => a.status === 'completed').length,
@@ -268,6 +259,8 @@ export default function FinanceDashboard() {
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-50 group-hover:border-zinc-100 transition-colors">
                     <span className="text-[10px] text-zinc-500 font-medium">Serviço:</span>
                     <span className="text-[10px] font-bold text-zinc-700">{ag.servicoName}</span>
+                    <span className="text-[10px] text-zinc-300 ml-auto">•</span>
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">{ag.profissionalName || 'Profissional'}</span>
                   </div>
                 </div>
               ))}

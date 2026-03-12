@@ -171,6 +171,7 @@ export default function PublicSite() {
         servicoId: selectedService.id,
         servicoName: selectedService.name,
         profissionalId: profId,
+        profissionalName: selectedProfissional?.name || 'Profissional',
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'pending',

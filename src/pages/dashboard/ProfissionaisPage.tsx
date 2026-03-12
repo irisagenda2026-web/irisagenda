@@ -84,6 +84,19 @@ export default function ProfissionaisPage() {
           isActive: formData.isActive
         });
 
+        // Sync with linked user account if exists
+        if (editingProfissional.userId) {
+          try {
+            const { updateUser } = await import('../../services/db');
+            await updateUser(editingProfissional.userId, {
+              name: formData.name,
+              email: formData.email
+            });
+          } catch (syncError) {
+            console.error('Erro ao sincronizar dados do usuário:', syncError);
+          }
+        }
+
         // If createAccount is checked for an existing professional
         if (formData.createAccount && !editingProfissional.userId && formData.email && formData.password) {
           await createProfessionalAccount(editingProfissional.id);

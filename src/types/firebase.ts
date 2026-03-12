@@ -62,6 +62,7 @@ export interface Agendamento {
   servicoId: string;
   servicoName: string;
   profissionalId: string;
+  profissionalName: string;
   startTime: number; // timestamp
   endTime: number; // timestamp
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';

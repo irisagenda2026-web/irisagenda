@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { auth, db } from '../services/firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { User, UserRole } from '../types/firebase';
+import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { User, UserRole, Profissional } from '../types/firebase';
 
 interface AuthContextType {
   user: User | null;
   role: UserRole;
+  profissional: Profissional | null;
   isLoading: boolean;
   logout: () => Promise<void>;
 }
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRoleState] = useState<UserRole>('guest');
+  const [profissional, setProfissional] = useState<Profissional | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [firestoreError, setFirestoreError] = useState<string | null>(null);
 
@@ -23,38 +25,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       setFirestoreError(null);
+      setProfissional(null);
       
       if (firebaseUser) {
         console.log("Auth state changed: User logged in", firebaseUser.uid);
         try {
           // Try to get user role from Firestore
-          console.log("Fetching user doc from Firestore...");
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           
           if (userDoc.exists()) {
-            console.log("User doc found:", userDoc.data());
             const userData = userDoc.data() as User;
             let finalUser = { ...userData, id: firebaseUser.uid };
             
             // Migration: Ensure empresaId is set for owners
             if (userData.role === 'empresa' && !userData.empresaId) {
-              console.log("Migrating user: adding empresaId");
               finalUser.empresaId = firebaseUser.uid;
               await setDoc(doc(db, 'users', firebaseUser.uid), finalUser, { merge: true });
             }
             
             setUser(finalUser);
             setRoleState(userData.role);
+
+            // If professional, find the linked record
+            if (userData.role === 'profissional' && userData.empresaId) {
+              const q = query(
+                collection(db, 'profissionais'), 
+                where('empresaId', '==', userData.empresaId)
+              );
+              const profsSnap = await getDocs(q);
+              const profs = profsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Profissional));
+              
+              // Try UID first, then email
+              const myProf = profs.find(p => p.userId === firebaseUser.uid) || 
+                             profs.find(p => p.email?.toLowerCase() === firebaseUser.email?.toLowerCase());
+              
+              if (myProf) {
+                setProfissional(myProf);
+                // If found by email but userId was missing, sync it
+                if (!myProf.userId) {
+                  await setDoc(doc(db, 'profissionais', myProf.id), { userId: firebaseUser.uid }, { merge: true });
+                }
+              }
+            }
           } else {
-            console.log("User doc NOT found, creating default...");
             // Default role for new users if not set
-            // For testing purposes, if the email is admin@irisagenda.com, make them an admin
             const isFirstAdmin = firebaseUser.email === 'admin@irisagenda.com';
             const newUser: User = {
               id: firebaseUser.uid,
               name: isFirstAdmin ? 'Administrador Geral' : (firebaseUser.displayName || 'Usuário'),
               email: firebaseUser.email || '',
-              role: isFirstAdmin ? 'admin' : 'empresa', // Defaulting to empresa for this demo
+              role: isFirstAdmin ? 'admin' : 'empresa',
               empresaId: isFirstAdmin ? undefined : firebaseUser.uid
             };
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
@@ -72,12 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } else {
-        console.log("Auth state changed: User logged out");
         setUser(null);
         setRoleState('guest');
+        setProfissional(null);
       }
       setIsLoading(false);
-      console.log("AuthContext loading finished");
     });
 
     return () => unsubscribe();
@@ -118,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, role, profissional, isLoading, logout }}>
       {children}
     </AuthContext.Provider>
   );

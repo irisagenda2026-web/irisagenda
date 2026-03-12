@@ -118,6 +118,19 @@ export const getAllAgendamentos = async (empresaId: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Agendamento));
 };
 
+export const calculateCommission = (totalPrice: number, servico: Servico, profissionalId: string) => {
+  const profComm = servico.professionalCommissions?.[profissionalId];
+  const type = profComm?.type || servico.commissionType || 'percentage';
+  const val = profComm?.value ?? servico.commissionValue ?? 0;
+  
+  const amount = type === 'percentage' ? (totalPrice * val) / 100 : val;
+  return {
+    type,
+    value: val,
+    amount
+  };
+};
+
 export const createAgendamento = async (data: Omit<Agendamento, 'id' | 'createdAt'>) => {
   return await addDoc(collection(db, 'agendamentos'), {
     ...data,

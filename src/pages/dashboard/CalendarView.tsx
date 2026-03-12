@@ -10,7 +10,7 @@ import { auth } from '@/src/services/firebase';
 import { 
   getAgendamentos, createAgendamento, getServicos, addServico, 
   getBloqueios, createBloqueio, deleteBloqueio, getProfissionais, getBusinessHours,
-  updateAgendamentoStatus
+  updateAgendamentoStatus, calculateCommission
 } from '@/src/services/db';
 import { Agendamento, Servico, Bloqueio, Profissional } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -439,6 +439,12 @@ export default function CalendarView() {
                                   "text-xs font-medium truncate",
                                   ag.status === 'completed' ? "text-zinc-500" : "text-emerald-700"
                                 )}>{ag.servicoName}</div>
+                                <div className={cn(
+                                  "text-[10px] font-bold truncate mt-0.5",
+                                  ag.status === 'completed' ? "text-zinc-400" : "text-emerald-600"
+                                )}>
+                                  {ag.profissionalName || 'Profissional'}
+                                </div>
                                 {height >= 60 && (
                                   <div className={cn(
                                     "text-[10px] flex items-center gap-1 font-bold w-fit px-2 py-0.5 rounded-md mt-1",
@@ -530,7 +536,7 @@ export default function CalendarView() {
                                 </span>
                               </div>
                               <p className="text-xs text-zinc-500">
-                                <span className="font-medium">Profissional:</span> Lavínia Corrêa • Sepetiba
+                                <span className="font-medium">Profissional:</span> {ag.profissionalName || 'Profissional'}
                               </p>
                             </div>
 
@@ -542,7 +548,7 @@ export default function CalendarView() {
                                 <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-md font-bold">Portal</span>
                               </div>
                               <p className="text-xs text-zinc-500">
-                                <span className="font-medium">Profissional:</span> Lavínia Corrêa • Sepetiba
+                                <span className="font-medium">Status:</span> {ag.status === 'completed' ? 'Concluído' : 'Confirmado'}
                               </p>
                             </div>
                           </div>
@@ -754,13 +760,8 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         return;
       }
 
-      const profComm = servico.professionalCommissions?.[formData.profissionalId];
-      const commType = profComm?.type || servico.commissionType || 'percentage';
-      const commValue = profComm?.value ?? servico.commissionValue ?? 0;
-
-      const commissionAmount = commType === 'percentage' 
-        ? (servico.price * commValue) / 100 
-        : commValue;
+      const profComm = calculateCommission(servico.price, servico, formData.profissionalId);
+      const prof = profissionais.find(p => p.id === formData.profissionalId);
 
       await createAgendamento({
         empresaId: authUser.empresaId,
@@ -770,13 +771,14 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         servicoId: servico.id,
         servicoName: servico.name,
         profissionalId: formData.profissionalId,
+        profissionalName: prof?.name || 'Profissional',
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'confirmed',
         totalPrice: servico.price,
-        commissionType: commType,
-        commissionValue: commValue,
-        commissionAmount
+        commissionType: profComm.type,
+        commissionValue: profComm.value,
+        commissionAmount: profComm.amount
       });
       
       onSuccess();

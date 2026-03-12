@@ -7,19 +7,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
-import { getAgendamentos, getServicos, getProfissionais, getAllAgendamentos, updateAgendamentoStatus } from '@/src/services/db';
+import { getAgendamentos, getServicos, getProfissionais, getAllAgendamentos, updateAgendamentoStatus, calculateCommission } from '@/src/services/db';
 import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useMemo } from 'react';
 
 export default function MainDashboard() {
-  const { role, user: authUser } = useAuth();
+  const { role, user: authUser, profissional: currentProfissional } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentProfissional, setCurrentProfissional] = useState<Profissional | null>(null);
 
   const loadData = async () => {
     const firebaseUser = auth.currentUser;
@@ -37,36 +36,24 @@ export default function MainDashboard() {
       ]);
 
       let filteredAg = agData;
-      if (role === 'profissional') {
-        const profs = await getProfissionais(authUser.empresaId);
-        // Robust lookup: try UID first, then email
-        const myProf = profs.find(p => p.userId === firebaseUser.uid) || 
-                       profs.find(p => p.email?.toLowerCase() === firebaseUser.email?.toLowerCase());
+      if (role === 'profissional' && currentProfissional) {
+        filteredAg = agData.filter(a => a.profissionalId === currentProfissional.id);
         
-        if (myProf) {
-          setCurrentProfissional(myProf);
-          filteredAg = agData.filter(a => a.profissionalId === myProf.id);
+        // Calculate total balance from all completed/confirmed agendamentos
+        const myAllAg = allAgData.filter(a => a.profissionalId === currentProfissional.id && (a.status === 'completed' || a.status === 'confirmed'));
+        const balance = myAllAg.reduce((acc, curr) => {
+          if (curr.commissionAmount !== undefined && curr.commissionAmount !== null) return acc + curr.commissionAmount;
           
-          // Calculate total balance from all completed/confirmed agendamentos
-          const myAllAg = allAgData.filter(a => a.profissionalId === myProf.id && (a.status === 'completed' || a.status === 'confirmed'));
-          const balance = myAllAg.reduce((acc, curr) => {
-            if (curr.commissionAmount !== undefined && curr.commissionAmount !== null) return acc + curr.commissionAmount;
-            
-            // Fallback calculation if missing
-            const s = svData.find(s => s.id === curr.servicoId);
-            if (!s) return acc;
-            
-            const profComm = s.professionalCommissions?.[myProf.id];
-            const type = profComm?.type || s.commissionType || 'percentage';
-            const val = profComm?.value ?? s.commissionValue ?? 0;
-            const amt = type === 'percentage' ? (curr.totalPrice * val) / 100 : val;
-            return acc + amt;
-          }, 0);
-          setTotalBalance(balance);
-        } else {
-          console.warn("Professional record not found for user:", firebaseUser.uid);
-          filteredAg = []; // If we can't find the professional record, they shouldn't see anything
-        }
+          // Fallback calculation if missing
+          const s = svData.find(s => s.id === curr.servicoId);
+          if (!s) return acc;
+          
+          const comm = calculateCommission(curr.totalPrice, s, currentProfissional.id);
+          return acc + comm.amount;
+        }, 0);
+        setTotalBalance(balance);
+      } else if (role === 'profissional' && !currentProfissional) {
+        filteredAg = [];
       }
 
       setAgendamentos(filteredAg);
@@ -91,10 +78,8 @@ export default function MainDashboard() {
           // Fallback
           const s = servicos.find(s => s.id === curr.servicoId);
           if (!s || !currentProfissional) return acc;
-          const profComm = s.professionalCommissions?.[currentProfissional.id];
-          const type = profComm?.type || s.commissionType || 'percentage';
-          const val = profComm?.value ?? s.commissionValue ?? 0;
-          return acc + (type === 'percentage' ? (curr.totalPrice * val) / 100 : val);
+          const comm = calculateCommission(curr.totalPrice, s, currentProfissional.id);
+          return acc + comm.amount;
         }
         return acc + curr.totalPrice;
       }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 
@@ -182,7 +167,13 @@ export default function MainDashboard() {
                           <div className="w-px h-8 bg-zinc-100" />
                           <div>
                             <p className="text-sm font-bold text-zinc-900">{ag.clienteName}</p>
-                            <p className="text-xs text-zinc-500">{ag.servicoName}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-zinc-500">{ag.servicoName}</p>
+                              <span className="text-[10px] text-zinc-300">•</span>
+                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                                {ag.profissionalName || 'Profissional'}
+                              </p>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
