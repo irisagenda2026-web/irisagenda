@@ -45,6 +45,16 @@ export default function PublicSite() {
   const [availabilityOverrides, setAvailabilityOverrides] = useState<AvailabilityOverride[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
+  const DEFAULT_BUSINESS_HOURS = {
+    '0': { isOpen: false, slots: [] },
+    '1': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
+    '2': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
+    '3': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
+    '4': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
+    '5': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '18:00' }] },
+    '6': { isOpen: true, slots: [{ start: '08:00', end: '12:00' }] },
+  };
+
   useEffect(() => {
     const loadData = async () => {
       if (slug) {
@@ -93,13 +103,51 @@ export default function PublicSite() {
         // Filter agendamentos for this professional
         setExistingAgendamentos(ags.filter(a => a.profissionalId === selectedProfissional.id));
         setExistingBloqueios(bls);
-        setBusinessHours(hours);
+        
+        // Robust business hours fallback
+        const hasValidHours = hours && Object.keys(hours).length > 0 && Object.values(hours).some((day: any) => day.isOpen);
+        setBusinessHours(hasValidHours ? hours : DEFAULT_BUSINESS_HOURS);
+        
         setAvailabilityOverrides(overrides);
         setIsLoadingSlots(false);
       }
     };
     loadSlots();
   }, [empresa, selectedDate, selectedProfissional]);
+
+  // Auto-select professional if only one is available for the selected service
+  useEffect(() => {
+    if (selectedService && step === 'profissional') {
+      const availableProfs = profissionais.filter(prof => {
+        if (!selectedService.professionalIds || selectedService.professionalIds.length === 0) {
+          return true;
+        }
+        return selectedService.professionalIds.includes(prof.id);
+      });
+
+      if (availableProfs.length === 1) {
+        setSelectedProfissional(availableProfs[0]);
+        setStep('datetime');
+      }
+    }
+  }, [selectedService, step, profissionais]);
+
+  // Reset professional if no longer valid for service
+  useEffect(() => {
+    if (selectedService && selectedProfissional) {
+      const isStillValid = !selectedService.professionalIds || 
+                          selectedService.professionalIds.length === 0 || 
+                          selectedService.professionalIds.includes(selectedProfissional.id);
+      
+      if (!isStillValid) {
+        setSelectedProfissional(null);
+        setSelectedTime(null);
+        if (step !== 'service' && step !== 'profissional') {
+          setStep('profissional');
+        }
+      }
+    }
+  }, [selectedService]);
 
   const generateTimeSlots = () => {
     if (!selectedService || !selectedProfissional) return [];
