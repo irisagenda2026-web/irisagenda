@@ -496,7 +496,7 @@ export default function PublicSite() {
                   
                   {/* Simple Date Selector */}
                   <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {Array.from({ length: empresa?.settings?.visibilityDays || 14 }).map((_, i) => {
+                    {Array.from({ length: empresa?.settings?.visibilityDays || 60 }).map((_, i) => {
                       const date = startOfDay(addDays(new Date(), i));
                       const isSelected = isSameDayDate(date, selectedDate);
                       

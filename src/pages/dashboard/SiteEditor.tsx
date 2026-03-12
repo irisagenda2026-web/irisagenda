@@ -351,8 +351,8 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
             <input 
               type="number" 
               min={1}
-              max={60}
-              value={empresa.settings.visibilityDays || 14}
+              max={90}
+              value={empresa.settings.visibilityDays || 60}
               onChange={e => setEmpresa({ 
                 ...empresa, 
                 settings: { ...empresa.settings, visibilityDays: parseInt(e.target.value) } 

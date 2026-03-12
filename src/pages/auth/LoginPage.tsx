@@ -14,11 +14,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { role, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     if (!authLoading && role !== 'guest') {
-      if (role === 'admin') {
+      const from = location.state?.from?.pathname;
+      if (from) {
+        navigate(from, { replace: true });
+      } else if (role === 'admin') {
         navigate('/admin/dashboard');
       } else if (role === 'empresa' || role === 'profissional') {
         navigate('/dashboard/calendar');
@@ -26,7 +30,7 @@ export default function LoginPage() {
         navigate('/my-appointments');
       }
     }
-  }, [role, authLoading, navigate]);
+  }, [role, authLoading, navigate, location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

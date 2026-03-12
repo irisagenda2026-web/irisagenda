@@ -15,6 +15,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ClientDashboard from './pages/client/ClientDashboard';
 import PublicSite from './pages/public/PublicSite';
 import SupportChat from './components/SupportChat';
+import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlatformProvider } from './contexts/PlatformContext';
 import { 
@@ -257,21 +258,21 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 
                 {/* Empresa Routes */}
-                <Route path="/dashboard" element={<MainDashboard />} />
-                <Route path="/dashboard/calendar" element={<CalendarView />} />
-                <Route path="/dashboard/finance" element={<FinanceDashboard />} />
-                <Route path="/dashboard/clientes" element={<ClientesPage />} />
-                <Route path="/dashboard/profissionais" element={<ProfissionaisPage />} />
-                <Route path="/dashboard/disponibilidade" element={<BusinessHoursPage />} />
-                <Route path="/dashboard/profile" element={<ProfilePage />} />
-                <Route path="/dashboard/site" element={<SiteEditor />} />
+                <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['empresa', 'profissional']}><MainDashboard /></ProtectedRoute>} />
+                <Route path="/dashboard/calendar" element={<ProtectedRoute allowedRoles={['empresa', 'profissional']}><CalendarView /></ProtectedRoute>} />
+                <Route path="/dashboard/finance" element={<ProtectedRoute allowedRoles={['empresa', 'profissional']}><FinanceDashboard /></ProtectedRoute>} />
+                <Route path="/dashboard/clientes" element={<ProtectedRoute allowedRoles={['empresa']}><ClientesPage /></ProtectedRoute>} />
+                <Route path="/dashboard/profissionais" element={<ProtectedRoute allowedRoles={['empresa']}><ProfissionaisPage /></ProtectedRoute>} />
+                <Route path="/dashboard/disponibilidade" element={<ProtectedRoute allowedRoles={['empresa', 'profissional']}><BusinessHoursPage /></ProtectedRoute>} />
+                <Route path="/dashboard/profile" element={<ProtectedRoute allowedRoles={['empresa', 'profissional', 'cliente']}><ProfilePage /></ProtectedRoute>} />
+                <Route path="/dashboard/site" element={<ProtectedRoute allowedRoles={['empresa', 'admin']}><SiteEditor /></ProtectedRoute>} />
 
                 {/* Admin Routes */}
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/clinics" element={<AdminDashboard />} />
+                <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/admin/clinics" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
                 
                 {/* Cliente Routes */}
-                <Route path="/my-appointments" element={<ClientDashboard />} />
+                <Route path="/my-appointments" element={<ProtectedRoute allowedRoles={['cliente']}><ClientDashboard /></ProtectedRoute>} />
               </Route>
             </Routes>
           </div>
