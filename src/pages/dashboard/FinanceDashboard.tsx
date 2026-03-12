@@ -49,11 +49,14 @@ export default function FinanceDashboard() {
         
         if (role === 'profissional') {
           const profs = await getProfissionais(user.empresaId);
-          const myProf = profs.find(p => p.userId === auth.currentUser?.uid);
+          const myProf = profs.find(p => p.userId === auth.currentUser?.uid) ||
+                         profs.find(p => p.email?.toLowerCase() === auth.currentUser?.email?.toLowerCase());
+          
           if (myProf) {
             setCurrentProf(myProf);
             setAgendamentos(agData.filter(a => a.profissionalId === myProf.id));
           } else {
+            console.warn("Professional record not found for user:", auth.currentUser?.uid);
             setAgendamentos([]);
           }
         } else {
@@ -69,7 +72,7 @@ export default function FinanceDashboard() {
     totalRevenue: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? curr.totalPrice : 0), 0),
     totalCommission: agendamentos.reduce((acc, curr) => {
       if (curr.status !== 'completed' && curr.status !== 'confirmed') return acc;
-      if (curr.commissionAmount !== undefined) return acc + curr.commissionAmount;
+      if (curr.commissionAmount !== undefined && curr.commissionAmount !== null) return acc + curr.commissionAmount;
       
       // Fallback
       const s = servicos.find(s => s.id === curr.servicoId);

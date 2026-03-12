@@ -39,18 +39,23 @@ export default function MainDashboard() {
       let filteredAg = agData;
       if (role === 'profissional') {
         const profs = await getProfissionais(authUser.empresaId);
-        const myProf = profs.find(p => p.userId === firebaseUser.uid);
+        // Robust lookup: try UID first, then email
+        const myProf = profs.find(p => p.userId === firebaseUser.uid) || 
+                       profs.find(p => p.email?.toLowerCase() === firebaseUser.email?.toLowerCase());
+        
         if (myProf) {
           setCurrentProfissional(myProf);
           filteredAg = agData.filter(a => a.profissionalId === myProf.id);
           
-          // Calculate total balance from all completed agendamentos
+          // Calculate total balance from all completed/confirmed agendamentos
           const myAllAg = allAgData.filter(a => a.profissionalId === myProf.id && (a.status === 'completed' || a.status === 'confirmed'));
           const balance = myAllAg.reduce((acc, curr) => {
-            if (curr.commissionAmount !== undefined) return acc + curr.commissionAmount;
+            if (curr.commissionAmount !== undefined && curr.commissionAmount !== null) return acc + curr.commissionAmount;
+            
             // Fallback calculation if missing
             const s = svData.find(s => s.id === curr.servicoId);
             if (!s) return acc;
+            
             const profComm = s.professionalCommissions?.[myProf.id];
             const type = profComm?.type || s.commissionType || 'percentage';
             const val = profComm?.value ?? s.commissionValue ?? 0;
@@ -58,6 +63,9 @@ export default function MainDashboard() {
             return acc + amt;
           }, 0);
           setTotalBalance(balance);
+        } else {
+          console.warn("Professional record not found for user:", firebaseUser.uid);
+          filteredAg = []; // If we can't find the professional record, they shouldn't see anything
         }
       }
 
@@ -75,8 +83,11 @@ export default function MainDashboard() {
     { 
       label: role === 'profissional' ? 'Comissão Hoje' : 'Receita Hoje', 
       value: `R$ ${agendamentos.reduce((acc, curr) => {
+        // Only count confirmed or completed for revenue/commission
+        if (curr.status !== 'completed' && curr.status !== 'confirmed') return acc;
+
         if (role === 'profissional') {
-          if (curr.commissionAmount !== undefined) return acc + curr.commissionAmount;
+          if (curr.commissionAmount !== undefined && curr.commissionAmount !== null) return acc + curr.commissionAmount;
           // Fallback
           const s = servicos.find(s => s.id === curr.servicoId);
           if (!s || !currentProfissional) return acc;
