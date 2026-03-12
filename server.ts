@@ -10,22 +10,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
-let credential;
-if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-  try {
-    const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
-    credential = admin.credential.cert(serviceAccount);
-  } catch (e) {
-    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64', e);
+try {
+  let credential;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    try {
+      const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
+      credential = admin.credential.cert(serviceAccount);
+      console.log('Firebase Admin: Using service account from environment variable');
+    } catch (e) {
+      console.error('Firebase Admin: Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64', e);
+    }
   }
-}
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: credential || admin.credential.applicationDefault(),
-    projectId: "irisagenda-b6e66",
-    storageBucket: "irisagenda-b6e66.appspot.com"
-  });
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: credential || admin.credential.applicationDefault(),
+      projectId: "irisagenda-b6e66",
+      storageBucket: "irisagenda-b6e66.appspot.com"
+    });
+    console.log('Firebase Admin: Initialized successfully');
+  }
+} catch (initError) {
+  console.error('Firebase Admin: Initialization error', initError);
 }
 
 const bucket = admin.storage().bucket();
@@ -40,6 +46,15 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
+
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      firebaseAdmin: admin.apps.length > 0 ? 'initialized' : 'not_initialized'
+    });
+  });
 
   // API Route for Upload (Bypasses CORS and Security Rules)
   app.post('/api/upload', upload.single('file'), async (req, res) => {
@@ -129,6 +144,11 @@ async function startServer() {
       console.error('Server Create Professional Error:', error);
       res.status(500).json({ error: error.message || 'Erro interno no servidor' });
     }
+  });
+
+  // Catch-all for undefined API routes
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: `Rota API não encontrada: ${req.method} ${req.url}` });
   });
 
   // Vite middleware for development

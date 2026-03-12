@@ -168,13 +168,27 @@ export default function ProfissionaisPage() {
         })
       });
 
+      const contentType = response.headers.get('content-type');
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar conta');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Erro ao criar conta');
+        } else {
+          const textError = await response.text();
+          console.error('Non-JSON error response:', textError);
+          // If it looks like an HTML 404 page
+          if (textError.includes('<!DOCTYPE html>') || textError.includes('<html')) {
+            throw new Error(`O servidor de API não foi encontrado (404). Se você estiver no Vercel, certifique-se de que as funções API estão configuradas.`);
+          }
+          throw new Error(`Erro no servidor (${response.status}).`);
+        }
       }
+      
+      return await response.json();
     } catch (accountError: any) {
       console.error('Erro ao criar conta:', accountError);
       alert('Houve um erro ao criar a conta de acesso: ' + accountError.message);
+      throw accountError;
     }
   };
 
