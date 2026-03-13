@@ -170,10 +170,13 @@ export default function PublicSite() {
     ).filter(slot => slot.available).map(slot => slot.time);
   };
 
-  const handleSchedule = async (skipAuthCheck = false) => {
-    if (!empresa || !selectedService || !selectedTime) return;
+  const handleSchedule = async (timeOverride?: string, authenticatedUser?: any) => {
+    const timeToUse = timeOverride || selectedTime;
+    const currentUser = authenticatedUser || user;
+
+    if (!empresa || !selectedService || !timeToUse) return;
     
-    if (!skipAuthCheck && !user) {
+    if (!authenticatedUser && !user) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -181,7 +184,7 @@ export default function PublicSite() {
     setIsSubmitting(true);
     
     try {
-      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const [hours, minutes] = timeToUse.split(':').map(Number);
       const startTime = new Date(selectedDate);
       startTime.setHours(hours, minutes, 0, 0);
       
@@ -225,9 +228,9 @@ export default function PublicSite() {
 
       await createAgendamento({
         empresaId: empresa.id,
-        clienteId: user?.id || 'guest',
-        clienteName: user?.name || 'Cliente',
-        clientePhone: user?.phone || '',
+        clienteId: currentUser?.id || 'guest',
+        clienteName: currentUser?.name || 'Cliente',
+        clientePhone: currentUser?.phone || '',
         servicoId: selectedService.id,
         servicoName: selectedService.name,
         profissionalId: profId,
@@ -245,7 +248,7 @@ export default function PublicSite() {
         `*Serviço:* ${selectedService.name}\n` +
         `*Profissional:* ${selectedProfissional?.name || 'Profissional'}\n` +
         `*Data:* ${format(startTime, "dd/MM/yyyy", { locale: ptBR })}\n` +
-        `*Horário:* ${selectedTime}\n\n` +
+        `*Horário:* ${timeToUse}\n\n` +
         `Aguardo confirmação!`;
       
       const phone = empresa.whatsapp || empresa.phone || '';
@@ -301,7 +304,7 @@ export default function PublicSite() {
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
-        onSuccess={() => handleSchedule(true)}
+        onSuccess={(userData) => handleSchedule(undefined, userData)}
         isBookingFlow={true}
       />
 
@@ -584,7 +587,7 @@ export default function PublicSite() {
                         key={time}
                         onClick={() => {
                           setSelectedTime(time);
-                          handleSchedule();
+                          handleSchedule(time);
                         }}
                         className={cn(
                           "py-3 rounded-xl border text-sm font-bold transition-all",

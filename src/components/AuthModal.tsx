@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, Loader2, AlertCircle, LogIn, UserPlus } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/src/services/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import Logo from '@/src/components/Logo';
 import { User as FirebaseUser } from '@/src/types/firebase';
@@ -12,7 +12,7 @@ import { Phone } from 'lucide-react';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (userData: FirebaseUser) => void;
   isBookingFlow?: boolean;
 }
 
@@ -32,8 +32,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isBookingFlow = 
     setError('');
 
     try {
+      let finalUserData: FirebaseUser;
+
       if (mode === 'login') {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        if (userDoc.exists()) {
+          finalUserData = { ...userDoc.data() as FirebaseUser, id: userCredential.user.uid };
+        } else {
+          finalUserData = {
+            id: userCredential.user.uid,
+            name: userCredential.user.displayName || 'Usuário',
+            email: userCredential.user.email || '',
+            role: 'cliente'
+          };
+        }
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -47,8 +60,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isBookingFlow = 
         };
         await setDoc(doc(db, 'users', user.uid), newUser);
         await updateProfile(user, { displayName: name });
+        finalUserData = newUser;
       }
-      onSuccess();
+      onSuccess(finalUserData);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Erro ao autenticar.');
