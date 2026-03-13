@@ -653,6 +653,7 @@ export default function CalendarView() {
           <ServicesModal 
             onClose={() => setIsServiceModalOpen(false)} 
             servicos={servicos}
+            profissionais={profissionais}
             onSuccess={loadData}
           />
         )}
@@ -1087,7 +1088,7 @@ function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onS
   );
 }
 
-function ServicesModal({ onClose, servicos, onSuccess }: any) {
+function ServicesModal({ onClose, servicos, profissionais, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
@@ -1095,7 +1096,9 @@ function ServicesModal({ onClose, servicos, onSuccess }: any) {
     price: '',
     durationMinutes: '60',
     commissionType: 'percentage' as 'percentage' | 'fixed',
-    commissionValue: '0'
+    commissionValue: '0',
+    professionalIds: [] as string[],
+    professionalCommissions: {} as Record<string, { type: 'percentage' | 'fixed', value: number }>
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1114,11 +1117,12 @@ function ServicesModal({ onClose, servicos, onSuccess }: any) {
         isActive: true,
         commissionType: formData.commissionType,
         commissionValue: Number(formData.commissionValue),
-        professionalCommissions: {}
+        professionalIds: formData.professionalIds,
+        professionalCommissions: formData.professionalCommissions
       });
       
       setIsAdding(false);
-      setFormData({ name: '', price: '', durationMinutes: '60', commissionType: 'percentage', commissionValue: '0' });
+      setFormData({ name: '', price: '', durationMinutes: '60', commissionType: 'percentage', commissionValue: '0', professionalIds: [], professionalCommissions: {} });
       onSuccess();
     } catch (error) {
       console.error(error);
@@ -1191,31 +1195,128 @@ function ServicesModal({ onClose, servicos, onSuccess }: any) {
 
               <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 space-y-4 mb-4">
                 <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-600" />
+                  Profissionais que realizam
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {profissionais.map((prof: any) => (
+                    <button
+                      key={prof.id}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.professionalIds || [];
+                        if (current.includes(prof.id)) {
+                          setFormData({ ...formData, professionalIds: current.filter(id => id !== prof.id) });
+                        } else {
+                          setFormData({ ...formData, professionalIds: [...current, prof.id] });
+                        }
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all",
+                        formData.professionalIds?.includes(prof.id)
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                          : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold",
+                        formData.professionalIds?.includes(prof.id) ? "bg-emerald-600 text-white" : "bg-zinc-200 text-zinc-500"
+                      )}>
+                        {prof.name[0]}
+                      </div>
+                      <span className="text-xs font-medium truncate">{prof.name}</span>
+                    </button>
+                  ))}
+                </div>
+                {profissionais.length === 0 && (
+                  <p className="text-xs text-zinc-500 italic">Nenhum profissional cadastrado.</p>
+                )}
+              </div>
+
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 space-y-4 mb-4">
+                <h4 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                   Configuração de Comissão
                 </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tipo</label>
-                    <select
-                      value={formData.commissionType}
-                      onChange={(e) => setFormData({ ...formData, commissionType: e.target.value as any })}
-                      className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                    >
-                      <option value="percentage">Porcentagem (%)</option>
-                      <option value="fixed">Valor Fixo (R$)</option>
-                    </select>
+                
+                <div className="space-y-4">
+                  <div className="p-3 bg-white rounded-xl border border-zinc-200">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase mb-2">Comissão Padrão (Geral)</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Tipo</label>
+                        <select
+                          value={formData.commissionType}
+                          onChange={(e) => setFormData({ ...formData, commissionType: e.target.value as any })}
+                          className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                        >
+                          <option value="percentage">Porcentagem (%)</option>
+                          <option value="fixed">Valor Fixo (R$)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Valor</label>
+                        <input
+                          type="number"
+                          value={formData.commissionValue}
+                          onChange={(e) => setFormData({ ...formData, commissionValue: e.target.value })}
+                          className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-1">Valor</label>
-                    <input
-                      type="number"
-                      value={formData.commissionValue}
-                      onChange={(e) => setFormData({ ...formData, commissionValue: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                      placeholder="0.00"
-                    />
-                  </div>
+
+                  {formData.professionalIds && formData.professionalIds.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase">Comissões Específicas por Profissional</p>
+                      {formData.professionalIds.map(profId => {
+                        const prof = profissionais.find((p: any) => p.id === profId);
+                        if (!prof) return null;
+                        
+                        const comm = formData.professionalCommissions?.[profId] || { 
+                          type: formData.commissionType || 'percentage', 
+                          value: Number(formData.commissionValue) || 0 
+                        };
+
+                        return (
+                          <div key={profId} className="p-3 bg-white rounded-xl border border-zinc-200 flex flex-col gap-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[8px] font-bold">
+                                {prof.name[0]}
+                              </div>
+                              <span className="text-xs font-bold text-zinc-700">{prof.name}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <select
+                                value={comm.type}
+                                onChange={(e) => {
+                                  const newComms = { ...(formData.professionalCommissions || {}) };
+                                  newComms[profId] = { ...comm, type: e.target.value as any };
+                                  setFormData({ ...formData, professionalCommissions: newComms });
+                                }}
+                                className="px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                              >
+                                <option value="percentage">%</option>
+                                <option value="fixed">R$</option>
+                              </select>
+                              <input
+                                type="number"
+                                value={comm.value}
+                                onChange={(e) => {
+                                  const newComms = { ...(formData.professionalCommissions || {}) };
+                                  newComms[profId] = { ...comm, value: parseFloat(e.target.value) || 0 };
+                                  setFormData({ ...formData, professionalCommissions: newComms });
+                                }}
+                                className="px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
