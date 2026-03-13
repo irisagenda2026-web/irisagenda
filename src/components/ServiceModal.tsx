@@ -74,7 +74,7 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
       setFormData(prev => ({ ...prev, imageUrl: url }));
     } catch (error: any) {
       console.error(error);
-      alert('Erro ao fazer upload da imagem: ' + (error.message || 'Erro desconhecido'));
+      console.error('Erro ao fazer upload da imagem: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploading(false);
     }
@@ -88,7 +88,7 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
       onClose();
     } catch (error) {
       console.error(error);
-      alert('Erro ao salvar serviço.');
+      console.error('Erro ao salvar serviço.');
     } finally {
       setIsSaving(false);
     }
@@ -198,19 +198,22 @@ export default function ServiceModal({ isOpen, onClose, onSave, initialData, cat
                 <label className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
                   <Tag size={14} /> Categoria (Opcional)
                 </label>
-                <input 
-                  type="text" 
-                  list="categories"
-                  value={formData.category || ''}
-                  onChange={e => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="Ex: Facial, Corporal, Massagem..."
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                />
-                <datalist id="categories">
-                  {categories.map(cat => (
-                    <option key={cat} value={cat} />
-                  ))}
-                </datalist>
+                {categories.length > 0 ? (
+                  <select
+                    value={formData.category || ''}
+                    onChange={e => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  >
+                    <option value="">Selecione uma categoria</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-500">
+                    Nenhuma categoria cadastrada. Crie categorias na aba "Categorias de Serviços".
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

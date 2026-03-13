@@ -26,6 +26,7 @@ export interface Empresa {
   phone: string;
   whatsapp: string;
   category: 'beauty' | 'aesthetics' | 'health';
+  serviceCategories?: string[]; // Custom categories created by the company
   ownerId: string;
   plan: 'essencial' | 'profissional' | 'enterprise';
   settings: {

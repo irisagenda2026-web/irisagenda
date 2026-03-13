@@ -36,6 +36,7 @@ export default function PublicSite() {
   const [selectedService, setSelectedService] = useState<Servico | null>(null);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [selectedProfissional, setSelectedProfissional] = useState<Profissional | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
@@ -357,11 +358,18 @@ export default function PublicSite() {
                 {/* Categories Navigation (Simulated Carousel) */}
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-100 overflow-x-auto no-scrollbar">
                   <div className="flex gap-2 min-w-max">
-                    <button className="px-6 py-2 bg-zinc-900 text-white rounded-full text-sm font-bold shadow-lg shadow-zinc-900/20">
+                    <button 
+                      onClick={() => setSelectedCategory('Todos')}
+                      className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === 'Todos' ? 'bg-zinc-900 text-white shadow-lg shadow-zinc-900/20' : 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100'}`}
+                    >
                       Todos
                     </button>
                     {Array.from(new Set(servicos.map(s => s.category || 'Geral'))).map(cat => (
-                      <button key={cat} className="px-6 py-2 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 rounded-full text-sm font-bold transition-colors">
+                      <button 
+                        key={cat} 
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === cat ? 'bg-zinc-900 text-white shadow-lg shadow-zinc-900/20' : 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100'}`}
+                      >
                         {cat}
                       </button>
                     ))}
@@ -371,6 +379,7 @@ export default function PublicSite() {
                 {Object.entries(
                   servicos.reduce((acc, service) => {
                     const cat = service.category || 'Geral';
+                    if (selectedCategory !== 'Todos' && cat !== selectedCategory) return acc;
                     if (!acc[cat]) acc[cat] = [];
                     acc[cat].push(service);
                     return acc;
@@ -384,35 +393,36 @@ export default function PublicSite() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {categoryServices.map(service => (
                         <motion.button
-                          whileHover={{ y: -4 }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           key={service.id}
                           onClick={() => {
                             setSelectedService(service);
                             setStep('profissional');
                           }}
-                          className="flex flex-col bg-white border border-zinc-100 rounded-3xl overflow-hidden hover:shadow-xl hover:shadow-emerald-900/5 transition-all group text-left h-full"
+                          className="flex items-center bg-white border border-zinc-100 p-4 rounded-2xl hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-900/5 transition-all group text-left w-full relative overflow-hidden"
                         >
-                          <div className="h-40 bg-zinc-100 relative overflow-hidden">
+                          <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-zinc-100 mr-4 relative">
                             {service.imageUrl ? (
-                              <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                              <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-zinc-50 text-zinc-300">
-                                <ImageIcon size={40} />
+                                <ImageIcon size={24} />
                               </div>
                             )}
-                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-zinc-900 shadow-sm">
-                              {service.durationMinutes} min
+                          </div>
+                          <div className="flex-1 min-w-0 py-1 pr-8">
+                            <div className="flex justify-between items-start mb-1 gap-2">
+                              <h3 className="font-bold text-zinc-900 text-lg truncate group-hover:text-emerald-600 transition-colors">{service.name}</h3>
+                            </div>
+                            <p className="text-sm text-zinc-500 line-clamp-2 mb-2">{service.description || 'Sem descrição'}</p>
+                            <div className="flex items-center gap-3 text-xs font-medium text-zinc-400">
+                              <span className="flex items-center gap-1 bg-zinc-100 px-2 py-1 rounded-md text-zinc-600"><Clock size={12} /> {service.durationMinutes} min</span>
+                              <span className="font-bold text-emerald-600 text-sm whitespace-nowrap">R$ {service.price}</span>
                             </div>
                           </div>
-                          <div className="p-5 flex flex-col flex-1">
-                            <h3 className="font-bold text-zinc-900 text-lg mb-1 group-hover:text-emerald-600 transition-colors">{service.name}</h3>
-                            <p className="text-sm text-zinc-500 line-clamp-2 mb-4 flex-1">{service.description || 'Sem descrição'}</p>
-                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-50">
-                              <span className="text-lg font-bold text-emerald-600">R$ {service.price}</span>
-                              <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
-                                <ChevronRight size={18} />
-                              </div>
-                            </div>
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                            <ChevronRight size={18} />
                           </div>
                         </motion.button>
                       ))}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Image as ImageIcon, Plus, Trash2, Layout, DollarSign, Info, Loader2, Upload, Clock } from 'lucide-react';
+import { Save, Image as ImageIcon, Plus, Trash2, Layout, DollarSign, Info, Loader2, Upload, Clock, List } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
 import { getEmpresa, updateEmpresa, getServicos, addServico, updateServico, deleteServico } from '@/src/services/db';
@@ -89,6 +89,12 @@ export default function SiteEditor() {
               label="Informações Gerais" 
             />
             <NavButton 
+              active={activeTab === 'categories'} 
+              onClick={() => setActiveTab('categories')} 
+              icon={List} 
+              label="Categorias de Serviços" 
+            />
+            <NavButton 
               active={activeTab === 'services'} 
               onClick={() => setActiveTab('services')} 
               icon={DollarSign} 
@@ -116,7 +122,8 @@ export default function SiteEditor() {
           <main className="flex-1 bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-8">
               {activeTab === 'info' && <GeneralInfoForm empresa={empresa} setEmpresa={setEmpresa} onCorsError={() => setShowCorsModal(true)} />}
-              {activeTab === 'services' && <ServicesForm empresaId={empresa?.id} onCorsError={() => setShowCorsModal(true)} />}
+              {activeTab === 'categories' && <CategoriesForm empresa={empresa} setEmpresa={setEmpresa} />}
+              {activeTab === 'services' && <ServicesForm empresa={empresa} onCorsError={() => setShowCorsModal(true)} />}
               {activeTab === 'gallery' && <GalleryForm empresa={empresa} setEmpresa={setEmpresa} onCorsError={() => setShowCorsModal(true)} />}
             </div>
           </main>
@@ -160,10 +167,10 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
     setIsSaving(true);
     try {
       await updateEmpresa(empresa.id, empresa);
-      alert('Informações salvas com sucesso!');
+      console.log('Informações salvas com sucesso!');
     } catch (error) {
       console.error(error);
-      alert('Erro ao salvar informações.');
+      console.error('Erro ao salvar informações.');
     } finally {
       setIsSaving(false);
     }
@@ -181,7 +188,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
       await updateEmpresa(empresa.id, { logoUrl: url });
     } catch (error: any) {
       console.error(error);
-      alert('Erro ao enviar logo: ' + (error.message || 'Erro desconhecido'));
+      console.error('Erro ao enviar logo: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploadingLogo(false);
     }
@@ -199,7 +206,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
       await updateEmpresa(empresa.id, { coverUrl: url });
     } catch (error: any) {
       console.error(error);
-      alert('Erro ao enviar capa: ' + (error.message || 'Erro desconhecido'));
+      console.error('Erro ao enviar capa: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploadingCover(false);
     }
@@ -217,7 +224,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
       await updateEmpresa(empresa.id, { faviconUrl: url });
     } catch (error: any) {
       console.error(error);
-      alert('Erro ao enviar favicon: ' + (error.message || 'Erro desconhecido'));
+      console.error('Erro ao enviar favicon: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploadingFavicon(false);
     }
@@ -378,33 +385,129 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
   );
 }
 
-function ServicesForm({ empresaId, onCorsError }: { empresaId?: string, onCorsError: () => void }) {
+function CategoriesForm({ empresa, setEmpresa }: { empresa: Empresa | null, setEmpresa: any }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+
+  if (!empresa) return null;
+
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSaving(true);
+    try {
+      await updateEmpresa(empresa.id, { serviceCategories: empresa.serviceCategories });
+      // Show success message (can be improved with a toast later)
+      console.log('Categorias salvas com sucesso!');
+    } catch (error) {
+      console.error(error);
+      console.error('Erro ao salvar categorias.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategory.trim()) return;
+    
+    const categories = empresa.serviceCategories || [];
+    if (!categories.includes(newCategory.trim())) {
+      setEmpresa({ ...empresa, serviceCategories: [...categories, newCategory.trim()] });
+    }
+    setNewCategory('');
+  };
+
+  const handleRemoveCategory = (categoryToRemove: string) => {
+    const categories = empresa.serviceCategories || [];
+    setEmpresa({ ...empresa, serviceCategories: categories.filter(c => c !== categoryToRemove) });
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="font-bold text-zinc-900">Categorias de Serviços</h3>
+          <p className="text-sm text-zinc-500">Crie categorias para organizar seus serviços no site.</p>
+        </div>
+        <button 
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-70"
+        >
+          {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+          Salvar Alterações
+        </button>
+      </div>
+
+      <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-200">
+        <form onSubmit={handleAddCategory} className="flex gap-3 mb-6">
+          <input 
+            type="text" 
+            value={newCategory}
+            onChange={e => setNewCategory(e.target.value)}
+            placeholder="Ex: Cabelo, Unhas, Massagem..."
+            className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+          />
+          <button 
+            type="submit"
+            disabled={!newCategory.trim()}
+            className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-zinc-800 transition-all disabled:opacity-50"
+          >
+            <Plus size={20} />
+            Adicionar
+          </button>
+        </form>
+
+        <div className="space-y-3">
+          {(!empresa.serviceCategories || empresa.serviceCategories.length === 0) && (
+            <p className="text-sm text-zinc-500 text-center py-4">Nenhuma categoria cadastrada.</p>
+          )}
+          
+          {empresa.serviceCategories?.map((category, index) => (
+            <div key={index} className="flex items-center justify-between bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
+              <span className="font-medium text-zinc-900">{category}</span>
+              <button 
+                onClick={() => handleRemoveCategory(category)}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Remover categoria"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServicesForm({ empresa, onCorsError }: { empresa: Empresa | null, onCorsError: () => void }) {
   const [services, setServices] = useState<Servico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Servico | null>(null);
 
   useEffect(() => {
-    if (empresaId) {
+    if (empresa?.id) {
       loadServices();
     }
-  }, [empresaId]);
+  }, [empresa?.id]);
 
   const loadServices = async () => {
-    if (!empresaId) return;
-    const data = await getServicos(empresaId);
+    if (!empresa?.id) return;
+    const data = await getServicos(empresa.id);
     setServices(data);
     setIsLoading(false);
   };
 
   const handleSaveService = async (data: Partial<Servico>) => {
-    if (!empresaId) return;
+    if (!empresa?.id) return;
 
     if (editingService) {
       await updateServico(editingService.id, data);
     } else {
       await addServico({
-        empresaId,
+        empresaId: empresa.id,
         name: data.name!,
         price: data.price!,
         durationMinutes: data.durationMinutes!,
@@ -439,7 +542,7 @@ function ServicesForm({ empresaId, onCorsError }: { empresaId?: string, onCorsEr
   };
 
   // Extract unique categories
-  const categories: string[] = Array.from(new Set(services.map(s => s.category || 'Geral')));
+  const categories: string[] = empresa?.serviceCategories || [];
 
   if (isLoading) return <Loader2 className="animate-spin mx-auto text-emerald-600" />;
 
@@ -520,7 +623,7 @@ function ServicesForm({ empresaId, onCorsError }: { empresaId?: string, onCorsEr
         onSave={handleSaveService}
         initialData={editingService}
         categories={categories}
-        empresaId={empresaId || ''}
+        empresaId={empresa?.id || ''}
         onCorsError={onCorsError}
       />
     </div>
@@ -549,15 +652,14 @@ function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | 
       await updateEmpresa(empresa.id, { gallery: newGallery });
     } catch (err: any) {
       console.error(err);
-      alert('Erro ao fazer upload da imagem: ' + (err.message || 'Erro desconhecido'));
+      console.error('Erro ao fazer upload da imagem: ' + (err.message || 'Erro desconhecido'));
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleDelete = async (url: string) => {
-    if (!confirm('Deseja remover esta foto?')) return;
-
+    // In a real app, use a custom modal for confirmation
     try {
       // Extract path from URL (simplified for demo)
       // In a real app, you'd store the path or use a more robust way to get it
@@ -566,7 +668,7 @@ function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | 
       await updateEmpresa(empresa.id, { gallery: newGallery });
     } catch (err) {
       console.error(err);
-      alert('Erro ao remover imagem.');
+      console.error('Erro ao remover imagem.');
     }
   };
 
