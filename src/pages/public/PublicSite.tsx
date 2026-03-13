@@ -47,6 +47,7 @@ export default function PublicSite() {
   const [availabilityOverrides, setAvailabilityOverrides] = useState<AvailabilityOverride[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState<string>('');
 
   const DEFAULT_BUSINESS_HOURS = {
     '0': { isOpen: false, slots: [] },
@@ -239,6 +240,20 @@ export default function PublicSite() {
         commissionValue: commValue,
         commissionAmount
       });
+
+      const message = `Olá! Acabei de realizar um agendamento:\n\n` +
+        `*Serviço:* ${selectedService.name}\n` +
+        `*Profissional:* ${selectedProfissional?.name || 'Profissional'}\n` +
+        `*Data:* ${format(startTime, "dd/MM/yyyy", { locale: ptBR })}\n` +
+        `*Horário:* ${selectedTime}\n\n` +
+        `Aguardo confirmação!`;
+      
+      const phone = empresa.whatsapp || empresa.phone || '';
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone) {
+        const waUrl = `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}`;
+        setWhatsappUrl(waUrl);
+      }
 
       setStep('success');
     } catch (error) {
@@ -605,6 +620,17 @@ export default function PublicSite() {
                   Seu horário foi reservado com sucesso. Você receberá uma confirmação via WhatsApp em breve.
                 </p>
                 <div className="flex flex-col gap-3 w-full max-w-xs">
+                  {whatsappUrl && (
+                    <a 
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-[#25D366] text-white px-8 py-4 rounded-xl font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                    >
+                      <MessageCircle size={20} />
+                      Informe a nós sobre sua reserva
+                    </a>
+                  )}
                   <Link 
                     to="/my-appointments"
                     className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"

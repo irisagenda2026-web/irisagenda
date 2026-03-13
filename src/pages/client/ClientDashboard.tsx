@@ -26,21 +26,23 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function ClientDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: isLoadingAuth } = useAuth();
   const [appointments, setAppointments] = useState<Agendamento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadAppointments = async () => {
-      if (user?.uid) {
+      if (user?.id) {
         setIsLoading(true);
-        const ags = await getAgendamentosByCliente(user.uid);
+        const ags = await getAgendamentosByCliente(user.id);
         setAppointments(ags);
+        setIsLoading(false);
+      } else if (!isLoadingAuth) {
         setIsLoading(false);
       }
     };
     loadAppointments();
-  }, [user]);
+  }, [user, isLoadingAuth]);
 
   const handleCancel = async (id: string) => {
     if (confirm('Tem certeza que deseja cancelar este agendamento?')) {
