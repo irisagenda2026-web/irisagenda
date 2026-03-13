@@ -672,6 +672,7 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [error, setError] = useState('');
+  const [modalDateStr, setModalDateStr] = useState(format(selectedDate, 'yyyy-MM-dd'));
   
   const allowedProfissionais = authUser?.role === 'profissional' 
     ? profissionais.filter((p: any) => p.userId === authUser.id)
@@ -686,18 +687,20 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
 
   useEffect(() => {
     const fetchAvailability = async () => {
-      if (!formData.profissionalId || !formData.servicoId || !authUser?.empresaId) return;
+      if (!formData.profissionalId || !formData.servicoId || !authUser?.empresaId || !modalDateStr) return;
       setLoadingSlots(true);
       
-      const start = new Date(selectedDate);
+      // Parse the date string safely
+      const [year, month, day] = modalDateStr.split('-').map(Number);
+      const modalDate = new Date(year, month - 1, day);
+      
+      const start = new Date(modalDate);
       start.setHours(0, 0, 0, 0);
-      const end = new Date(selectedDate);
+      const end = new Date(modalDate);
       end.setHours(23, 59, 59, 999);
 
       try {
-        const year = selectedDate.getFullYear();
-        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-        const monthStr = `${year}-${month}`;
+        const monthStr = `${year}-${String(month).padStart(2, '0')}`;
 
         const [agData, blData, bhData, ovData] = await Promise.all([
           getAgendamentos(authUser.empresaId, start.getTime(), end.getTime()),
@@ -712,7 +715,7 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
         const profAgendamentos = agData.filter(a => a.profissionalId === formData.profissionalId);
 
         const slots = generateTimeSlots(
-          selectedDate,
+          modalDate,
           bhData,
           ovData,
           profAgendamentos,
@@ -741,27 +744,30 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
     };
 
     fetchAvailability();
-  }, [formData.profissionalId, formData.servicoId, selectedDate]);
+  }, [formData.profissionalId, formData.servicoId, modalDateStr]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!authUser?.empresaId || !formData.servicoId || !formData.hour) return;
+    if (!authUser?.empresaId || !formData.servicoId || !formData.hour || !modalDateStr) return;
 
     setLoading(true);
     try {
       const servico = servicos.find((s: any) => s.id === formData.servicoId);
       const [h, m] = formData.hour.split(':').map(Number);
       
-      const startTime = new Date(selectedDate);
+      const [year, month, day] = modalDateStr.split('-').map(Number);
+      const modalDate = new Date(year, month - 1, day);
+      
+      const startTime = new Date(modalDate);
       startTime.setHours(h, m, 0, 0);
       
       const endTime = new Date(startTime.getTime() + (servico.durationMinutes * 60000));
 
       // FINAL VALIDATION: Check for overlaps one last time before saving
-      const startOfDay = new Date(selectedDate);
+      const startOfDay = new Date(modalDate);
       startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(selectedDate);
+      const endOfDay = new Date(modalDate);
       endOfDay.setHours(23, 59, 59, 999);
 
       const [existingAgs, existingBls] = await Promise.all([
@@ -859,6 +865,17 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
               </div>
               
               <div className="space-y-2">
+                <label className="text-sm font-semibold text-zinc-700">Data</label>
+                <input 
+                  required
+                  type="date" 
+                  value={modalDateStr}
+                  onChange={e => setModalDateStr(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-semibold text-zinc-700">Serviço</label>
                 <select 
                   required
@@ -944,6 +961,7 @@ function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onS
   const { user: authUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [modalDateStr, setModalDateStr] = useState(format(selectedDate, 'yyyy-MM-dd'));
   
   const allowedProfissionais = authUser?.role === 'profissional' 
     ? profissionais.filter((p: any) => p.userId === authUser.id)
@@ -959,15 +977,18 @@ function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!authUser?.empresaId || !formData.profissionalId) return;
+    if (!authUser?.empresaId || !formData.profissionalId || !modalDateStr) return;
 
     const [sh, sm] = formData.startHour.split(':').map(Number);
     const [eh, em] = formData.endHour.split(':').map(Number);
     
-    const startTime = new Date(selectedDate);
+    const [year, month, day] = modalDateStr.split('-').map(Number);
+    const modalDate = new Date(year, month - 1, day);
+    
+    const startTime = new Date(modalDate);
     startTime.setHours(sh, sm, 0, 0);
     
-    const endTime = new Date(selectedDate);
+    const endTime = new Date(modalDate);
     endTime.setHours(eh, em, 0, 0);
 
     if (endTime <= startTime) {
@@ -1034,6 +1055,17 @@ function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onS
             </div>
           )}
           
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-zinc-700">Data</label>
+            <input 
+              required
+              type="date" 
+              value={modalDateStr}
+              onChange={e => setModalDateStr(e.target.value)}
+              className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-semibold text-zinc-700">Profissional</label>
             <select 
