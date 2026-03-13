@@ -349,7 +349,7 @@ export default function CalendarView() {
                       <span className="text-sm font-bold text-emerald-600">R$ {s.price}</span>
                     </div>
                   ))}
-                  {servicos.length > 4 && (
+                  {servicos.length > 4 && role === 'empresa' && (
                     <button onClick={() => setIsServiceModalOpen(true)} className="w-full text-center text-xs font-bold text-emerald-600 pt-2 hover:underline">
                       Ver todos ({servicos.length})
                     </button>
@@ -673,10 +673,14 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [error, setError] = useState('');
   
+  const allowedProfissionais = authUser?.role === 'profissional' 
+    ? profissionais.filter((p: any) => p.userId === authUser.id)
+    : profissionais;
+
   const [formData, setFormData] = useState({
     clienteName: '',
     servicoId: servicos.length > 0 ? servicos[0].id : '',
-    profissionalId: profissionais.length > 0 ? profissionais[0].id : 'default',
+    profissionalId: allowedProfissionais.length > 0 ? allowedProfissionais[0].id : 'default',
     hour: ''
   });
 
@@ -876,10 +880,10 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
                   onChange={e => setFormData({...formData, profissionalId: e.target.value})}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
-                  {profissionais.length === 0 ? (
-                    <option value="default">Lavínia Corrêa (Padrão)</option>
+                  {allowedProfissionais.length === 0 ? (
+                    <option value="default">Nenhum profissional disponível</option>
                   ) : (
-                    profissionais.map((p: any) => (
+                    allowedProfissionais.map((p: any) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))
                   )}
@@ -937,11 +941,17 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
 }
 
 function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onSuccess }: any) {
+  const { user: authUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const allowedProfissionais = authUser?.role === 'profissional' 
+    ? profissionais.filter((p: any) => p.userId === authUser.id)
+    : profissionais;
+
   const [formData, setFormData] = useState({
     reason: '',
-    profissionalId: profissionais.length > 0 ? profissionais[0].id : '',
+    profissionalId: allowedProfissionais.length > 0 ? allowedProfissionais[0].id : '',
     startHour: '12:00',
     endHour: '13:00'
   });
@@ -949,8 +959,7 @@ function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const user = auth.currentUser;
-    if (!user || !formData.profissionalId) return;
+    if (!authUser?.empresaId || !formData.profissionalId) return;
 
     const [sh, sm] = formData.startHour.split(':').map(Number);
     const [eh, em] = formData.endHour.split(':').map(Number);
@@ -982,7 +991,7 @@ function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onS
     setLoading(true);
     try {
       await createBloqueio({
-        empresaId: user.uid,
+        empresaId: authUser.empresaId,
         profissionalId: formData.profissionalId,
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
@@ -1033,9 +1042,13 @@ function NewBlockModal({ onClose, selectedDate, profissionais, agendamentos, onS
               onChange={e => setFormData({...formData, profissionalId: e.target.value})}
               className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
             >
-              {profissionais.map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {allowedProfissionais.length === 0 ? (
+                <option value="default">Nenhum profissional disponível</option>
+              ) : (
+                allowedProfissionais.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))
+              )}
             </select>
           </div>
 
