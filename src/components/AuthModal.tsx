@@ -1,0 +1,141 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Mail, Lock, User, Loader2, AlertCircle, LogIn, UserPlus } from 'lucide-react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '@/src/services/firebase';
+import Logo from '@/src/components/Logo';
+
+interface AuthModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      if (mode === 'login') {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: name });
+      }
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Erro ao autenticar.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-900/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
+              <h2 className="text-xl font-bold text-zinc-900">
+                {mode === 'login' ? 'Entrar na sua conta' : 'Criar sua conta'}
+              </h2>
+              <button onClick={onClose} className="p-2 text-zinc-400 hover:bg-zinc-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100 flex items-center gap-2">
+                  <AlertCircle size={16} />
+                  {error}
+                </div>
+              )}
+
+              {mode === 'signup' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-zinc-700 ml-1">Nome</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+                    <input 
+                      required
+                      type="text" 
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="Seu nome"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-zinc-700 ml-1">E-mail</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+                  <input 
+                    required
+                    type="email" 
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-zinc-700 ml-1">Senha</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+                  <input 
+                    required
+                    type="password" 
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <button 
+                disabled={isLoading}
+                type="submit"
+                className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70"
+              >
+                {isLoading ? <Loader2 className="animate-spin" size={20} /> : (mode === 'login' ? <LogIn size={20} /> : <UserPlus size={20} />)}
+                {mode === 'login' ? 'Entrar' : 'Criar conta'}
+              </button>
+            </form>
+
+            <div className="p-6 pt-0 text-center text-sm text-zinc-500">
+              {mode === 'login' ? 'Ainda não tem conta?' : 'Já tem conta?'}
+              <button 
+                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                className="ml-1 text-emerald-600 font-bold hover:underline"
+              >
+                {mode === 'login' ? 'Criar conta' : 'Entrar'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

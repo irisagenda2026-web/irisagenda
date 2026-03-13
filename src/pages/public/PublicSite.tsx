@@ -20,6 +20,7 @@ import { cn } from '@/src/utils/cn';
 import { getEmpresaBySlug, getServicos, createAgendamento, getAgendamentos, getBloqueios, getReviews, addReview, getProfissionais, getBusinessHours, getAvailabilityOverrides } from '@/src/services/db';
 import { Empresa, Servico, Agendamento, Bloqueio, Review, Profissional, AvailabilityOverride } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
+import AuthModal from '@/src/components/AuthModal';
 
 import { generateTimeSlots as getAvailableTimeSlots } from '@/src/utils/availability';
 
@@ -46,6 +47,7 @@ export default function PublicSite() {
   const [businessHours, setBusinessHours] = useState<any>(null);
   const [availabilityOverrides, setAvailabilityOverrides] = useState<AvailabilityOverride[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const DEFAULT_BUSINESS_HOURS = {
     '0': { isOpen: false, slots: [] },
@@ -170,6 +172,12 @@ export default function PublicSite() {
 
   const handleSchedule = async () => {
     if (!empresa || !selectedService || !selectedTime) return;
+    
+    if (role === 'guest') {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -217,7 +225,7 @@ export default function PublicSite() {
 
       await createAgendamento({
         empresaId: empresa.id,
-        clienteId: 'public-guest',
+        clienteId: user?.uid || 'public-guest',
         clienteName: customerInfo.name,
         clientePhone: customerInfo.phone,
         servicoId: selectedService.id,
@@ -280,6 +288,12 @@ export default function PublicSite() {
           </Link>
         </div>
       )}
+
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        onSuccess={handleSchedule}
+      />
 
       {/* Header / Cover */}
       <div className="relative h-[40vh] md:h-[50vh] bg-zinc-900 overflow-hidden">

@@ -143,6 +143,15 @@ export const updateAgendamentoStatus = async (id: string, status: Agendamento['s
   await updateDoc(docRef, { status });
 };
 
+export const getAgendamentosByCliente = async (clienteId: string) => {
+  const q = query(
+    collection(db, 'agendamentos'), 
+    where('clienteId', '==', clienteId)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Agendamento));
+};
+
 // Reviews
 export const getReviews = async (empresaId: string) => {
   // OPTIMIZATION: Client-side sort to avoid index requirement
