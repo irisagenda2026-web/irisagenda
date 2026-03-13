@@ -486,8 +486,26 @@ export default function PublicSite() {
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-6"
               >
-                <button onClick={() => setStep('profissional')} className="text-sm text-emerald-600 font-medium hover:underline">
-                  ← Voltar para profissionais
+                <button 
+                  onClick={() => {
+                    const availableProfs = profissionais.filter(prof => {
+                      if (!selectedService?.professionalIds || selectedService.professionalIds.length === 0) return true;
+                      return selectedService.professionalIds.includes(prof.id);
+                    });
+                    if (availableProfs.length === 1) {
+                      setStep('service');
+                    } else {
+                      setStep('profissional');
+                    }
+                  }} 
+                  className="text-sm text-emerald-600 font-medium hover:underline"
+                >
+                  ← {
+                    profissionais.filter(prof => {
+                      if (!selectedService?.professionalIds || selectedService.professionalIds.length === 0) return true;
+                      return selectedService.professionalIds.includes(prof.id);
+                    }).length === 1 ? 'Voltar para serviços' : 'Voltar para profissionais'
+                  }
                 </button>
                 
                 <div>
