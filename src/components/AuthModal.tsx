@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, Loader2, AlertCircle, LogIn, UserPlus } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '@/src/services/firebase';
+import { auth, db } from '@/src/services/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import Logo from '@/src/components/Logo';
+import { User as FirebaseUser } from '@/src/types/firebase';
+import { Phone } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,6 +22,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isBookingFlow = 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,13 +35,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isBookingFlow = 
       if (mode === 'login') {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        // Redirect to client signup page if in booking flow
-        if (isBookingFlow) {
-          navigate('/client-signup');
-          return;
-        }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: name });
+        const user = userCredential.user;
+
+        const newUser: FirebaseUser = {
+          id: user.uid,
+          name: name,
+          email: email,
+          phone: phone,
+          role: 'cliente',
+        };
+        await setDoc(doc(db, 'users', user.uid), newUser);
+        await updateProfile(user, { displayName: name });
       }
       onSuccess();
       onClose();
@@ -92,6 +101,23 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isBookingFlow = 
                 </div>
               )}
 
+              {mode === 'signup' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-zinc-700 ml-1">WhatsApp</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+                    <input 
+                      required
+                      type="tel" 
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="(00) 90000-0000"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-zinc-700 ml-1">E-mail</label>
                 <div className="relative">
@@ -135,17 +161,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isBookingFlow = 
             <div className="p-6 pt-0 text-center text-sm text-zinc-500">
               {mode === 'login' ? 'Ainda não tem conta?' : 'Já tem conta?'}
               <button 
-                onClick={() => {
-                  if (mode === 'login') {
-                    if (isBookingFlow) {
-                      navigate('/client-signup');
-                    } else {
-                      setMode('signup');
-                    }
-                  } else {
-                    setMode('login');
-                  }
-                }}
+                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
                 className="ml-1 text-emerald-600 font-bold hover:underline"
               >
                 {mode === 'login' ? 'Criar conta' : 'Entrar'}

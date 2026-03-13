@@ -31,7 +31,7 @@ export default function PublicSite() {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [step, setStep] = useState<'service' | 'profissional' | 'datetime' | 'confirm' | 'success'>('service');
+  const [step, setStep] = useState<'service' | 'profissional' | 'datetime' | 'success'>('service');
   
   // Selection State
   const [selectedService, setSelectedService] = useState<Servico | null>(null);
@@ -40,7 +40,6 @@ export default function PublicSite() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAgendamentos, setExistingAgendamentos] = useState<Agendamento[]>([]);
   const [existingBloqueios, setExistingBloqueios] = useState<Bloqueio[]>([]);
@@ -173,7 +172,7 @@ export default function PublicSite() {
   const handleSchedule = async (skipAuthCheck = false) => {
     if (!empresa || !selectedService || !selectedTime) return;
     
-    if (!skipAuthCheck && role === 'guest') {
+    if (!skipAuthCheck && !user) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -225,9 +224,9 @@ export default function PublicSite() {
 
       await createAgendamento({
         empresaId: empresa.id,
-        clienteId: user?.uid || 'public-guest',
-        clienteName: customerInfo.name,
-        clientePhone: customerInfo.phone,
+        clienteId: user?.id || 'guest',
+        clienteName: user?.name || 'Cliente',
+        clientePhone: user?.phone || '',
         servicoId: selectedService.id,
         servicoName: selectedService.name,
         profissionalId: profId,
@@ -241,11 +240,6 @@ export default function PublicSite() {
         commissionAmount
       });
 
-      // WhatsApp Notification Trigger (Simulated)
-      const message = `Olá ${empresa.name}! Acabei de realizar um agendamento via Iris Agenda.\n\n*Serviço:* ${selectedService.name}\n*Data:* ${startTime.toLocaleDateString('pt-BR')}\n*Hora:* ${selectedTime}\n*Cliente:* ${customerInfo.name}`;
-      const waUrl = `https://wa.me/${empresa.whatsapp?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-      
-      (window as any).waUrl = waUrl; 
       setStep('success');
     } catch (error) {
       console.error(error);
@@ -575,7 +569,7 @@ export default function PublicSite() {
                         key={time}
                         onClick={() => {
                           setSelectedTime(time);
-                          setStep('confirm');
+                          handleSchedule();
                         }}
                         className={cn(
                           "py-3 rounded-xl border text-sm font-bold transition-all",
@@ -596,87 +590,6 @@ export default function PublicSite() {
               </motion.div>
             )}
 
-            {step === 'confirm' && (
-              <motion.div
-                key="step-confirm"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-6"
-              >
-                <button onClick={() => setStep('datetime')} className="text-sm text-emerald-600 font-medium hover:underline">
-                  ← Voltar para horários
-                </button>
-
-                <div className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm">
-                  <h2 className="text-xl font-bold text-zinc-900 mb-6">Confirmar Agendamento</h2>
-                  
-                  <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3 text-zinc-600">
-                      <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center">
-                        <User size={18} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-zinc-400">Profissional</p>
-                        <p className="font-bold text-zinc-900">{selectedProfissional?.name}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 text-zinc-600">
-                      <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center">
-                        <Calendar size={18} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-zinc-400">Data e Hora</p>
-                        <p className="font-bold text-zinc-900">
-                          {selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })} às {selectedTime}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 text-zinc-600">
-                      <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center">
-                        <Clock size={18} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-zinc-400">Serviço</p>
-                        <p className="font-bold text-zinc-900">{selectedService?.name} ({selectedService?.durationMinutes} min)</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-zinc-700">Seu Nome</label>
-                      <input 
-                        type="text" 
-                        value={customerInfo.name}
-                        onChange={e => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                        placeholder="Como devemos te chamar?"
-                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-zinc-700">WhatsApp</label>
-                      <input 
-                        type="text" 
-                        value={customerInfo.phone}
-                        onChange={e => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                        placeholder="(11) 99999-9999"
-                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleSchedule}
-                    disabled={isSubmitting || !customerInfo.name || !customerInfo.phone}
-                    className="w-full mt-8 bg-emerald-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Confirmar Agendamento'}
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
             {step === 'success' && (
               <motion.div
                 key="step-success"
@@ -692,14 +605,12 @@ export default function PublicSite() {
                   Seu horário foi reservado com sucesso. Você receberá uma confirmação via WhatsApp em breve.
                 </p>
                 <div className="flex flex-col gap-3 w-full max-w-xs">
-                  <a 
-                    href={(window as any).waUrl}
-                    target="_blank"
+                  <Link 
+                    to="/my-appointments"
                     className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
                   >
-                    <MessageCircle size={20} />
-                    Enviar WhatsApp agora
-                  </a>
+                    Ver meus agendamentos
+                  </Link>
                   <button 
                     onClick={() => {
                       setStep('service');
