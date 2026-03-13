@@ -12,6 +12,7 @@ export interface User {
   email: string;
   role: UserRole;
   empresaId?: string;
+  phone?: string;
 }
 
 export interface Empresa {

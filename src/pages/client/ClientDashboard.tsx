@@ -27,7 +27,6 @@ import { ptBR } from 'date-fns/locale';
 
 export default function ClientDashboard() {
   const { user, logout } = useAuth();
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [appointments, setAppointments] = useState<Agendamento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -52,25 +51,19 @@ export default function ClientDashboard() {
 
   return (
     <div className="p-8 bg-zinc-50 min-h-screen">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Olá, {user?.name || 'Cliente'}!</h1>
-            <p className="text-zinc-500 text-sm">Gerencie seus agendamentos e histórico.</p>
+            <h1 className="text-2xl font-bold text-zinc-900">Olá, {user?.displayName || user?.email || 'Cliente'}!</h1>
+            <p className="text-zinc-500 text-sm">Seus agendamentos.</p>
           </div>
-          <div className="flex gap-4">
-            <button className="relative p-2 text-zinc-400 hover:text-zinc-900 transition-all">
-              <Bell size={24} />
-              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-zinc-50" />
-            </button>
-            <button 
-              onClick={() => logout()}
-              className="p-2 text-zinc-400 hover:text-red-500 transition-all"
-              title="Sair"
-            >
-              <LogOut size={24} />
-            </button>
-          </div>
+          <button 
+            onClick={() => logout()}
+            className="p-2 text-zinc-400 hover:text-red-500 transition-all"
+            title="Sair"
+          >
+            <LogOut size={24} />
+          </button>
         </header>
 
         {isLoading ? (
@@ -78,72 +71,38 @@ export default function ClientDashboard() {
             <Loader2 className="animate-spin text-emerald-600" size={40} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="md:col-span-2 space-y-6">
-              <section>
-                <h2 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
-                  <Calendar size={20} className="text-emerald-600" />
-                  Próximos Agendamentos
-                </h2>
-                <div className="space-y-4">
-                  {appointments.filter(a => a.status === 'confirmed' || a.status === 'pending').map(app => (
-                    <AppointmentCard key={app.id} appointment={app} onCancel={() => handleCancel(app.id)} />
-                  ))}
-                  {appointments.filter(a => a.status === 'confirmed' || a.status === 'pending').length === 0 && (
-                    <div className="bg-white p-8 rounded-3xl border border-dashed border-zinc-200 text-center">
-                      <p className="text-zinc-500 text-sm mb-4">Você não tem agendamentos futuros.</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
-                  <History size={20} className="text-zinc-400" />
-                  Histórico
-                </h2>
-                <div className="space-y-4">
-                  {appointments.filter(a => a.status === 'completed' || a.status === 'cancelled').map(app => (
-                    <AppointmentCard key={app.id} appointment={app} />
-                  ))}
-                </div>
-              </section>
-            </div>
-            {/* Sidebar */}
-            <div className="space-y-6">
-              <div className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm">
-                <h3 className="font-bold text-zinc-900 mb-4">Minha Conta</h3>
-                <div className="space-y-3">
-                  <SidebarLink 
-                    icon={UserIcon} 
-                    label="Meus Dados" 
-                    onClick={() => setIsProfileModalOpen(true)}
-                  />
-                  <SidebarLink icon={Star} label="Minhas Avaliações" count={3} />
-                  <SidebarLink icon={MessageCircle} label="Mensagens" count={0} />
-                  <SidebarLink icon={CreditCard} label="Métodos de Pagamento" />
-                </div>
+          <div className="space-y-8">
+            <section>
+              <h2 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
+                <Calendar size={20} className="text-emerald-600" />
+                Próximos Agendamentos
+              </h2>
+              <div className="space-y-4">
+                {appointments.filter(a => a.status === 'confirmed' || a.status === 'pending').map(app => (
+                  <AppointmentCard key={app.id} appointment={app} onCancel={() => handleCancel(app.id)} />
+                ))}
+                {appointments.filter(a => a.status === 'confirmed' || a.status === 'pending').length === 0 && (
+                  <div className="bg-white p-8 rounded-3xl border border-dashed border-zinc-200 text-center">
+                    <p className="text-zinc-500 text-sm">Você não tem agendamentos futuros.</p>
+                  </div>
+                )}
               </div>
+            </section>
 
-              <div className="bg-emerald-600 p-6 rounded-3xl text-white shadow-xl shadow-emerald-600/20">
-                <h3 className="font-bold mb-2">Iris Prime</h3>
-                <p className="text-xs text-emerald-100 mb-4">Ganhe cashback e prioridade em todas as clínicas parceiras.</p>
-                <button className="w-full bg-white text-emerald-600 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-50 transition-all">
-                  Saiba Mais
-                </button>
+            <section>
+              <h2 className="text-lg font-bold text-zinc-900 mb-4 flex items-center gap-2">
+                <History size={20} className="text-zinc-400" />
+                Histórico
+              </h2>
+              <div className="space-y-4">
+                {appointments.filter(a => a.status === 'completed' || a.status === 'cancelled').map(app => (
+                  <AppointmentCard key={app.id} appointment={app} />
+                ))}
               </div>
-            </div>
+            </section>
           </div>
         )}
       </div>
-
-      <ClientProfileModal 
-        isOpen={isProfileModalOpen} 
-        onClose={() => setIsProfileModalOpen(false)} 
-        user={user}
-        onUpdate={() => window.location.reload()} // Simple reload to refresh context
-      />
     </div>
   );
 }

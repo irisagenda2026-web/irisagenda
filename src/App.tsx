@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, Outlet, useLocation } fro
 import HomePage from './pages/landing/HomePage';
 import PlansPage from './pages/landing/PlansPage';
 import SignupPage from './pages/auth/SignupPage';
+import ClientSignupPage from './pages/auth/ClientSignupPage';
 import LoginPage from './pages/auth/LoginPage';
 import SiteEditor from './pages/dashboard/SiteEditor';
 import CalendarView from './pages/dashboard/CalendarView';
@@ -255,6 +256,7 @@ export default function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/plans" element={<PlansPage />} />
                 <Route path="/signup" element={<SignupPage />} />
+                <Route path="/client-signup" element={<ClientSignupPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 
                 {/* Empresa Routes */}

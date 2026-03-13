@@ -3,15 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, Loader2, AlertCircle, LogIn, UserPlus } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/src/services/firebase';
+import { useNavigate } from 'react-router-dom';
 import Logo from '@/src/components/Logo';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  isBookingFlow?: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onSuccess, isBookingFlow = false }: AuthModalProps) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +31,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       if (mode === 'login') {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
+        // Redirect to client signup page if in booking flow
+        if (isBookingFlow) {
+          navigate('/client-signup');
+          return;
+        }
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: name });
       }
@@ -127,7 +135,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             <div className="p-6 pt-0 text-center text-sm text-zinc-500">
               {mode === 'login' ? 'Ainda não tem conta?' : 'Já tem conta?'}
               <button 
-                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                onClick={() => {
+                  if (mode === 'login') {
+                    if (isBookingFlow) {
+                      navigate('/client-signup');
+                    } else {
+                      setMode('signup');
+                    }
+                  } else {
+                    setMode('login');
+                  }
+                }}
                 className="ml-1 text-emerald-600 font-bold hover:underline"
               >
                 {mode === 'login' ? 'Criar conta' : 'Entrar'}

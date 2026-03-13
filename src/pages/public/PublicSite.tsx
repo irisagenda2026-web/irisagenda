@@ -170,10 +170,10 @@ export default function PublicSite() {
     ).filter(slot => slot.available).map(slot => slot.time);
   };
 
-  const handleSchedule = async () => {
+  const handleSchedule = async (skipAuthCheck = false) => {
     if (!empresa || !selectedService || !selectedTime) return;
     
-    if (role === 'guest') {
+    if (!skipAuthCheck && role === 'guest') {
       setIsAuthModalOpen(true);
       return;
     }
@@ -292,7 +292,8 @@ export default function PublicSite() {
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
-        onSuccess={handleSchedule}
+        onSuccess={() => handleSchedule(true)}
+        isBookingFlow={true}
       />
 
       {/* Header / Cover */}
