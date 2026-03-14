@@ -8,7 +8,7 @@ import {
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
 import { 
-  getAgendamentos, createAgendamento, getServicos, addServico, 
+  getAgendamentos, createAgendamentoSecure, getServicos, addServico, 
   getBloqueios, createBloqueio, deleteBloqueio, getProfissionais, getBusinessHours,
   updateAgendamentoStatus, calculateCommission, getAvailabilityOverrides
 } from '@/src/services/db';
@@ -792,7 +792,7 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
       const profComm = calculateCommission(servico.price, servico, formData.profissionalId);
       const prof = profissionais.find(p => p.id === formData.profissionalId);
 
-      await createAgendamento({
+      await createAgendamentoSecure({
         empresaId: authUser.empresaId,
         clienteId: 'guest',
         clienteName: formData.clienteName,
@@ -812,9 +812,9 @@ function NewApptModal({ onClose, selectedDate, servicos, profissionais, onSucces
       
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Erro ao criar agendamento');
+      setError(error.message || 'Erro ao criar agendamento');
     } finally {
       setLoading(false);
     }

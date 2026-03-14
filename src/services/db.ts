@@ -119,6 +119,7 @@ export const createAgendamentoSecure = async (data: Omit<Agendamento, 'id' | 'cr
       agendamentosRef,
       where('empresaId', '==', data.empresaId),
       where('profissionalId', '==', data.profissionalId),
+      where('status', 'in', ['pending', 'confirmed', 'completed']),
       where('startTime', '<', data.endTime),
       where('endTime', '>', data.startTime)
     );

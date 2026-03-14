@@ -79,6 +79,13 @@ export default function PublicSite() {
           if (activeProfs.length === 1) {
             setSelectedProfissional(activeProfs[0]);
           }
+
+          // Validate selectedDate against visibilityDays
+          const maxDays = emp.settings?.visibilityDays || 60;
+          const maxDate = startOfDay(addDays(new Date(), maxDays - 1));
+          if (selectedDate > maxDate) {
+            setSelectedDate(startOfDay(new Date()));
+          }
         }
       }
       setIsLoading(false);
@@ -203,7 +210,7 @@ export default function PublicSite() {
         getBloqueios(empresa.id, profId, startOfDay.getTime(), endOfDay.getTime())
       ]);
 
-      const profAgs = existingAgs.filter(a => a.profissionalId === profId);
+      const profAgs = existingAgs.filter(a => a.profissionalId === profId && a.status !== 'cancelled');
       
       const hasOverlap = profAgs.some(ag => {
         return startTime.getTime() < ag.endTime && endTime.getTime() > ag.startTime;

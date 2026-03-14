@@ -94,6 +94,9 @@ export function generateTimeSlots(
 
     // Check agendamentos
     for (const ag of agendamentos) {
+      // Ignore cancelled appointments
+      if (ag.status === 'cancelled') continue;
+
       // Overlap condition: (StartA < EndB) and (EndA > StartB)
       if (slotStartTs < ag.endTime && slotEndTs > ag.startTime) {
         return true; // Overlaps
