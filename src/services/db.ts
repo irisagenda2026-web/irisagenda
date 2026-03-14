@@ -10,7 +10,9 @@ import {
   addDoc,
   orderBy,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  runTransaction,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Empresa, Servico, Agendamento, Bloqueio, Review, User, PlatformSettings, Profissional, AvailabilityOverride } from '../types/firebase';
@@ -97,16 +99,58 @@ export const deleteServico = async (id: string) => {
 
 // Agendamentos
 export const getAgendamentos = async (empresaId: string, dateStart: number, dateEnd: number) => {
-  // OPTIMIZATION: We fetch by empresaId and filter dates on client-side 
-  // to avoid requiring a composite index during development.
   const q = query(
     collection(db, 'agendamentos'), 
-    where('empresaId', '==', empresaId)
+    where('empresaId', '==', empresaId),
+    where('startTime', '<', dateEnd),
+    where('endTime', '>', dateStart)
   );
   const querySnapshot = await getDocs(q);
-  const allAgendamentos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Agendamento));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as Agendamento));
+};
+
+// Função com Transação para evitar reserva duplicada
+export const createAgendamentoSecure = async (data: Omit<Agendamento, 'id' | 'createdAt'>) => {
+  const agendamentosRef = collection(db, 'agendamentos');
   
-  return allAgendamentos.filter(a => a.startTime >= dateStart && a.startTime <= dateEnd);
+  return await runTransaction(db, async (transaction) => {
+    // 1. Verificar sobreposições no servidor (dentro da transação)
+    const q = query(
+      agendamentosRef,
+      where('empresaId', '==', data.empresaId),
+      where('profissionalId', '==', data.profissionalId),
+      where('startTime', '<', data.endTime),
+      where('endTime', '>', data.startTime)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      throw new Error('Este horário já foi preenchido por outro cliente.');
+    }
+
+    // 2. Verificar bloqueios
+    const bq = query(
+      collection(db, 'bloqueios'),
+      where('empresaId', '==', data.empresaId),
+      where('profissionalId', '==', data.profissionalId),
+      where('startTime', '<', data.endTime),
+      where('endTime', '>', data.startTime)
+    );
+    const bSnapshot = await getDocs(bq);
+    if (!bSnapshot.empty) {
+      throw new Error('Este horário está bloqueado pelo profissional.');
+    }
+
+    // 3. Criar o agendamento
+    const newDocRef = doc(agendamentosRef);
+    const newAgendamento = {
+      ...data,
+      createdAt: Date.now()
+    };
+    
+    transaction.set(newDocRef, newAgendamento);
+    return newDocRef;
+  });
 };
 
 export const getAllAgendamentos = async (empresaId: string) => {
@@ -174,24 +218,25 @@ export const addReview = async (data: Omit<Review, 'id' | 'createdAt'>) => {
 
 // Bloqueios
 export const getBloqueios = async (empresaId: string, profissionalId: string | null, dateStart: number, dateEnd: number) => {
-  // OPTIMIZATION: Client-side filtering to avoid index requirement
   let q;
   if (profissionalId) {
     q = query(
       collection(db, 'bloqueios'), 
       where('empresaId', '==', empresaId),
-      where('profissionalId', '==', profissionalId)
+      where('profissionalId', '==', profissionalId),
+      where('startTime', '<', dateEnd),
+      where('endTime', '>', dateStart)
     );
   } else {
     q = query(
       collection(db, 'bloqueios'), 
-      where('empresaId', '==', empresaId)
+      where('empresaId', '==', empresaId),
+      where('startTime', '<', dateEnd),
+      where('endTime', '>', dateStart)
     );
   }
   const querySnapshot = await getDocs(q);
-  const allBloqueios = querySnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as Bloqueio));
-  
-  return allBloqueios.filter(b => b.startTime >= dateStart && b.startTime <= dateEnd);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as Bloqueio));
 };
 
 export const createBloqueio = async (data: Omit<Bloqueio, 'id' | 'createdAt'>) => {

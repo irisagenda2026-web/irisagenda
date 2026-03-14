@@ -83,50 +83,36 @@ export function generateTimeSlots(
 
   // 3. Filter out slots that overlap with appointments or blocks
   const checkOverlap = (slotStartMins: number, slotEndMins: number) => {
-    // Normalize date for comparison (midnight)
-    const compareDate = new Date(date);
-    compareDate.setHours(0, 0, 0, 0);
+    // Convert slot times to absolute timestamps for more accurate comparison
+    const slotStartTime = new Date(date);
+    slotStartTime.setHours(Math.floor(slotStartMins / 60), slotStartMins % 60, 0, 0);
+    const slotEndTime = new Date(date);
+    slotEndTime.setHours(Math.floor(slotEndMins / 60), slotEndMins % 60, 0, 0);
+
+    const slotStartTs = slotStartTime.getTime();
+    const slotEndTs = slotEndTime.getTime();
 
     // Check agendamentos
     for (const ag of agendamentos) {
-      const agStart = new Date(ag.startTime);
-      const agEnd = new Date(ag.endTime);
-      
-      // Only check same day
-      if (isSameDay(agStart, date)) {
-        const agStartMins = agStart.getHours() * 60 + agStart.getMinutes();
-        const agEndMins = agEnd.getHours() * 60 + agEnd.getMinutes();
-
-        // Overlap condition: (StartA < EndB) and (EndA > StartB)
-        if (slotStartMins < agEndMins && slotEndMins > agStartMins) {
-          return true; // Overlaps
-        }
+      // Overlap condition: (StartA < EndB) and (EndA > StartB)
+      if (slotStartTs < ag.endTime && slotEndTs > ag.startTime) {
+        return true; // Overlaps
       }
     }
 
     // Check bloqueios
     for (const bl of bloqueios) {
-      const blStart = new Date(bl.startTime);
-      const blEnd = new Date(bl.endTime);
-      
-      // Only check same day
-      if (isSameDay(blStart, date)) {
-        const blStartMins = blStart.getHours() * 60 + blStart.getMinutes();
-        const blEndMins = blEnd.getHours() * 60 + blEnd.getMinutes();
-
-        if (slotStartMins < blEndMins && slotEndMins > blStartMins) {
-          return true; // Overlaps
-        }
+      if (slotStartTs < bl.endTime && slotEndTs > bl.startTime) {
+        return true; // Overlaps
       }
     }
 
     // Check if slot is in the past (if today)
     const now = new Date();
-    if (isSameDay(date, now)) {
-      const nowMins = now.getHours() * 60 + now.getMinutes();
-      if (slotStartMins <= nowMins) {
-        return true; // Overlaps with the past
-      }
+    // Add a 30-minute buffer for same-day bookings
+    const bufferMs = 30 * 60 * 1000;
+    if (slotStartTs <= now.getTime() + bufferMs) {
+      return true; // Too soon or in the past
     }
 
     return false; // No overlap

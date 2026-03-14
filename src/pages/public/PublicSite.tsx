@@ -17,7 +17,7 @@ import {
 import { format, addDays, startOfDay, isSameDay as isSameDayDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/src/utils/cn';
-import { getEmpresaBySlug, getServicos, createAgendamento, getAgendamentos, getBloqueios, getReviews, addReview, getProfissionais, getBusinessHours, getAvailabilityOverrides } from '@/src/services/db';
+import { getEmpresaBySlug, getServicos, createAgendamentoSecure, getAgendamentos, getBloqueios, getReviews, addReview, getProfissionais, getBusinessHours, getAvailabilityOverrides } from '@/src/services/db';
 import { Empresa, Servico, Agendamento, Bloqueio, Review, Profissional, AvailabilityOverride } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import AuthModal from '@/src/components/AuthModal';
@@ -51,11 +51,11 @@ export default function PublicSite() {
 
   const DEFAULT_BUSINESS_HOURS = {
     '0': { isOpen: false, slots: [] },
-    '1': { isOpen: false, slots: [] },
-    '2': { isOpen: false, slots: [] },
-    '3': { isOpen: false, slots: [] },
-    '4': { isOpen: false, slots: [] },
-    '5': { isOpen: false, slots: [] },
+    '1': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+    '2': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+    '3': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+    '4': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+    '5': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
     '6': { isOpen: false, slots: [] },
   };
 
@@ -226,7 +226,7 @@ export default function PublicSite() {
         ? (selectedService.price * commValue) / 100 
         : commValue;
 
-      await createAgendamento({
+      await createAgendamentoSecure({
         empresaId: empresa.id,
         clienteId: currentUser?.id || 'guest',
         clienteName: currentUser?.name || 'Cliente',
@@ -259,9 +259,9 @@ export default function PublicSite() {
       }
 
       setStep('success');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Erro ao realizar agendamento. Tente novamente.');
+      alert(error.message || 'Erro ao realizar agendamento. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
