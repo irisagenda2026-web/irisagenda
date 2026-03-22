@@ -11,6 +11,7 @@ interface AuthContextType {
   empresa: Empresa | null;
   isLoading: boolean;
   logout: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -147,8 +148,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
+  const refresh = async () => {
+    if (user?.id) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.id));
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          setUser({ ...userData, id: user.id });
+          if (userData.empresaId) {
+            const empresaDoc = await getDoc(doc(db, 'empresas', userData.empresaId));
+            if (empresaDoc.exists()) {
+              setEmpresa({ id: empresaDoc.id, ...empresaDoc.data() } as Empresa);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing auth data:", error);
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, role, profissional, empresa, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, role, profissional, empresa, isLoading, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

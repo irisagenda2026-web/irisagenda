@@ -266,6 +266,15 @@ export const updateEmpresaSubscription = async (empresaId: string, data: Partial
   await updateDoc(docRef, { subscription: data });
 };
 
+export const updateEmpresaPlan = async (empresaId: string, planId: string) => {
+  const docRef = doc(db, 'empresas', empresaId);
+  await updateDoc(docRef, { 
+    planId,
+    'subscription.status': 'active',
+    'subscription.currentPeriodEnd': Date.now() + (30 * 24 * 60 * 60 * 1000)
+  });
+};
+
 export const getReviewsByProfissional = async (empresaId: string, profissionalId: string) => {
   const q = query(
     collection(db, 'reviews'), 

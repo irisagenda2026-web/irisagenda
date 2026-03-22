@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { getPlans, updateEmpresaSubscription } from '@/src/services/db';
+import { getPlans, updateEmpresaSubscription, updateEmpresaPlan } from '@/src/services/db';
 import { Plan } from '@/src/types/firebase';
 import { Check, Zap, CreditCard, Calendar, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
+import PlanSelectionModal from '@/src/components/dashboard/PlanSelectionModal';
+import { toast } from 'react-hot-toast';
 
 export default function SubscriptionSettings() {
-  const { empresa } = useAuth();
+  const { empresa, refresh } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -35,6 +38,18 @@ export default function SubscriptionSettings() {
   
   const trialEndsAt = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt) : null;
   const daysLeft = trialEndsAt ? Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+
+  const handleSelectPlan = async (planId: string) => {
+    if (!empresa) return;
+    try {
+      await updateEmpresaPlan(empresa.id, planId);
+      await refresh();
+      toast.success('Plano atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error updating plan:', error);
+      toast.error('Erro ao atualizar plano. Tente novamente.');
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -124,7 +139,10 @@ export default function SubscriptionSettings() {
           <div className="bg-zinc-50 rounded-[40px] p-8 border border-zinc-100">
             <h3 className="text-lg font-black text-zinc-900 mb-4">Ações Rápidas</h3>
             <div className="space-y-3">
-              <button className="w-full py-4 bg-white border border-zinc-200 rounded-2xl font-bold text-zinc-900 hover:bg-zinc-100 transition-all text-sm">
+              <button 
+                onClick={() => setIsPlanModalOpen(true)}
+                className="w-full py-4 bg-white border border-zinc-200 rounded-2xl font-bold text-zinc-900 hover:bg-zinc-100 transition-all text-sm"
+              >
                 Alterar Plano
               </button>
               <button className="w-full py-4 bg-white border border-zinc-200 rounded-2xl font-bold text-zinc-900 hover:bg-zinc-100 transition-all text-sm">
@@ -148,6 +166,14 @@ export default function SubscriptionSettings() {
           </div>
         </div>
       </div>
+
+      <PlanSelectionModal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+        plans={plans}
+        currentPlanId={empresa?.planId}
+        onSelectPlan={handleSelectPlan}
+      />
     </div>
   );
 }

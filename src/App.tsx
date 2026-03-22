@@ -22,6 +22,7 @@ import SupportChat from './components/SupportChat';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlatformProvider } from './contexts/PlatformContext';
+import { Toaster } from 'react-hot-toast';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -293,6 +294,7 @@ export default function App() {
   return (
     <PlatformProvider>
       <AuthProvider>
+        <Toaster position="top-right" />
         <Router>
           <div className="min-h-screen bg-zinc-50 font-sans">
             <Routes>
