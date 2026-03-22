@@ -41,7 +41,8 @@ export default function ProfissionaisPage() {
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  const planLimit = empresa ? PLAN_LIMITS[empresa.plan]?.maxProfessionals || 1 : 1;
+  const planName = (empresa?.plan || empresa?.planId || 'BÁSICO').toUpperCase();
+  const planLimit = empresa ? (PLAN_LIMITS[empresa.plan] || PLAN_LIMITS[empresa.planId])?.maxProfessionals || 1 : 1;
   const isAtLimit = profissionais.length >= planLimit;
 
   useEffect(() => {
@@ -103,7 +104,8 @@ export default function ProfissionaisPage() {
         }
       } else {
         if (isAtLimit) {
-          alert(`Seu plano ${empresa?.plan.toUpperCase()} permite apenas ${planLimit} profissional(is). Faça upgrade para adicionar mais.`);
+          const planName = empresa?.plan?.toUpperCase() || 'BÁSICO';
+          alert(`Seu plano ${planName} permite apenas ${planLimit} profissional(is). Faça upgrade para adicionar mais.`);
           setIsSaving(false);
           return;
         }
@@ -206,7 +208,7 @@ export default function ProfissionaisPage() {
             Gestão de Profissionais
           </h1>
           <p className="text-gray-500 mt-1">
-            Gerencie sua equipe e limites do plano {empresa?.plan.toUpperCase()}
+            Gerencie sua equipe e limites do plano {planName}
           </p>
         </div>
 
@@ -244,7 +246,7 @@ export default function ProfissionaisPage() {
             <ShieldCheck className="w-6 h-6 text-emerald-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Status do Plano: {empresa?.plan.toUpperCase()}</h3>
+            <h3 className="font-semibold text-gray-900">Status do Plano: {planName}</h3>
             <p className="text-sm text-gray-500">
               Você está usando {profissionais.length} de {planLimit} profissionais permitidos.
             </p>

@@ -203,6 +203,25 @@ export default function BusinessHoursPage() {
     }
   };
 
+  const toggleProfissional = (id: string) => {
+    setSelectedProfissionalIds(prev => {
+      if (prev.includes(id)) {
+        return prev.length > 1 ? prev.filter(pId => pId !== id) : prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const selectAllProfissionais = () => {
+    setSelectedProfissionalIds(profissionais.map(p => p.id));
+  };
+
+  const deselectAllProfissionais = () => {
+    if (profissionais.length > 0) {
+      setSelectedProfissionalIds([profissionais[0].id]);
+    }
+  };
+
   const toggleDay = (dayId: string) => {
     setHours(prev => ({
       ...prev,
@@ -391,17 +410,17 @@ export default function BusinessHoursPage() {
             <button 
               onClick={() => setIsProfDropdownOpen(!isProfDropdownOpen)}
               disabled={role === 'profissional'}
-              className="w-full bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-2 px-4 shadow-sm flex items-center gap-2 justify-between disabled:opacity-50"
+              className="w-full bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-900 focus:ring-emerald-500 py-3 px-4 shadow-sm flex items-center gap-2 justify-between disabled:opacity-50 transition-all active:scale-[0.98]"
             >
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-zinc-400" />
                 <span>
                   {selectedProfissionalIds.length === 1 
                     ? profissionais.find(p => p.id === selectedProfissionalIds[0])?.name 
-                    : `${selectedProfissionalIds.length} selecionados`}
+                    : `${selectedProfissionalIds.length} profissionais selecionados`}
                 </span>
               </div>
-              {role === 'empresa' && <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isProfDropdownOpen && "rotate-90")} />}
+              {role === 'empresa' && <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform duration-300", isProfDropdownOpen && "rotate-90")} />}
             </button>
             
             <AnimatePresence>
@@ -414,33 +433,38 @@ export default function BusinessHoursPage() {
                     exit={{ opacity: 0, y: 10 }}
                     className="absolute top-full left-0 mt-2 w-full bg-white border border-zinc-200 rounded-2xl shadow-xl z-50 p-2 max-h-64 overflow-y-auto"
                   >
-                    <button 
-                      onClick={() => {
-                        if (selectedProfissionalIds.length === profissionais.length) {
-                          setSelectedProfissionalIds([profissionais[0].id]);
-                        } else {
-                          setSelectedProfissionalIds(profissionais.map(p => p.id));
-                        }
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-50 mb-1"
-                    >
-                      {selectedProfissionalIds.length === profissionais.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                    </button>
+                    <div className="flex items-center justify-between p-2 border-b border-zinc-50 mb-1">
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Equipe</span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={selectAllProfissionais}
+                          className="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors"
+                        >
+                          Todos
+                        </button>
+                        <button 
+                          onClick={deselectAllProfissionais}
+                          className="text-[10px] font-bold text-zinc-400 hover:bg-zinc-50 px-2 py-1 rounded-md transition-colors"
+                        >
+                          Limpar
+                        </button>
+                      </div>
+                    </div>
                     {profissionais.map(p => (
-                      <label key={p.id} className="flex items-center gap-3 px-3 py-2 hover:bg-zinc-50 rounded-lg cursor-pointer">
+                      <label key={p.id} className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
+                        selectedProfissionalIds.includes(p.id) ? "bg-emerald-50" : "hover:bg-zinc-50"
+                      )}>
                         <input 
                           type="checkbox"
                           checked={selectedProfissionalIds.includes(p.id)}
-                          onChange={() => {
-                            setSelectedProfissionalIds(prev => 
-                              prev.includes(p.id) 
-                                ? (prev.length > 1 ? prev.filter(id => id !== p.id) : prev) 
-                                : [...prev, p.id]
-                            );
-                          }}
-                          className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                          onChange={() => toggleProfissional(p.id)}
+                          className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
                         />
-                        <span className="text-sm font-medium text-zinc-700">{p.name}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-zinc-700">{p.name}</span>
+                          <span className="text-[10px] text-zinc-400">{p.isActive ? 'Ativo' : 'Inativo'}</span>
+                        </div>
                       </label>
                     ))}
                   </motion.div>

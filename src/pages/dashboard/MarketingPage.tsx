@@ -96,7 +96,7 @@ export default function MarketingPage() {
     try {
       await createCoupon({
         empresaId: empresa.id,
-        code: newCoupon.code.toUpperCase(),
+        code: (newCoupon.code || '').toUpperCase(),
         discount: Number(newCoupon.discount),
         type: newCoupon.type,
         expiryDate: new Date(newCoupon.expiryDate).getTime(),

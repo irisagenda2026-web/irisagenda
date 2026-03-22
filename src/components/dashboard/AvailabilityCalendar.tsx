@@ -247,38 +247,40 @@ export default function AvailabilityCalendar({
       {/* Bulk Action Bar (Floating) */}
       <AnimatePresence>
         {selectedDates.length > 0 && (
-          <motion.div 
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-zinc-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 border border-white/10 backdrop-blur-md"
-          >
-            <div className="flex items-center gap-3 border-r border-white/10 pr-6">
-              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center font-bold text-lg">
-                {selectedDates.length}
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[95%] max-w-2xl">
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="bg-zinc-900 text-white rounded-2xl md:rounded-3xl p-3 md:p-4 shadow-2xl border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4"
+            >
+              <div className="flex items-center gap-3 md:gap-4 px-2">
+                <div className="w-8 h-8 md:w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center font-bold text-sm md:text-base">
+                  {selectedDates.length}
+                </div>
+                <div>
+                  <p className="font-bold text-sm md:text-base leading-tight">Dias selecionados</p>
+                  <p className="text-[10px] md:text-xs text-zinc-400">Edição em massa ativa</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Dias Selecionados</p>
-                <p className="text-sm font-medium">Edição em massa ativa</p>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button 
+                  onClick={() => setSelectedDates([])}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold text-zinc-400 hover:bg-white/5 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleBulkEdit}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-500 text-white px-5 md:px-6 py-2.5 rounded-xl text-xs md:text-sm font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
+                >
+                  <Settings2 size={16} className="hidden xs:block" />
+                  Configurar Período
+                </button>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={handleBulkEdit}
-                className="bg-white text-zinc-900 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-zinc-100 transition-all flex items-center gap-2"
-              >
-                <Settings2 className="w-4 h-4" />
-                Configurar Período
-              </button>
-              <button 
-                onClick={() => setSelectedDates([])}
-                className="text-zinc-400 hover:text-white transition-colors p-2"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -556,7 +558,10 @@ export default function AvailabilityCalendar({
                                   type="number"
                                   placeholder="Preço padrão"
                                   value={slot.customPrice || ''}
-                                  onChange={(e) => updateSlot(index, 'customPrice', parseFloat(e.target.value))}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    updateSlot(index, 'customPrice', isNaN(val) ? undefined : val);
+                                  }}
                                   className="w-full pl-10 md:pl-12 pr-4 md:pr-6 py-3 md:py-4 bg-zinc-50 border-zinc-200 rounded-xl md:rounded-2xl text-base md:text-lg font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                                 />
                               </div>
