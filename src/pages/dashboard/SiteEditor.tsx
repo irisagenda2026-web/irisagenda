@@ -62,51 +62,55 @@ export default function SiteEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-8">
+    <div className="min-h-screen bg-zinc-50 p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
-        <header className="flex justify-between items-center mb-8">
+        <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">Configuração do Mini-site</h1>
-            <p className="text-zinc-500">Personalize como seus clientes veem sua clínica online.</p>
+            <p className="text-zinc-500 text-sm md:text-base">Personalize como seus clientes veem sua clínica online.</p>
           </div>
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-70"
+            className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-70 w-full sm:w-auto"
           >
             {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             Salvar Alterações
           </button>
         </header>
 
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Nav */}
-          <aside className="w-64 space-y-2">
+          <aside className="w-full lg:w-64 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 scrollbar-hide">
             <NavButton 
               active={activeTab === 'info'} 
               onClick={() => setActiveTab('info')} 
               icon={Info} 
-              label="Informações Gerais" 
+              label="Geral" 
+              fullLabel="Informações Gerais"
             />
             <NavButton 
               active={activeTab === 'categories'} 
               onClick={() => setActiveTab('categories')} 
               icon={List} 
-              label="Categorias de Serviços" 
+              label="Categorias" 
+              fullLabel="Categorias de Serviços"
             />
             <NavButton 
               active={activeTab === 'services'} 
               onClick={() => setActiveTab('services')} 
               icon={DollarSign} 
-              label="Serviços e Preços" 
+              label="Serviços" 
+              fullLabel="Serviços e Preços"
             />
             <NavButton 
               active={activeTab === 'gallery'} 
               onClick={() => setActiveTab('gallery')} 
               icon={ImageIcon} 
-              label="Galeria de Fotos" 
+              label="Galeria" 
+              fullLabel="Galeria de Fotos"
             />
-            <div className="pt-4 mt-4 border-t border-zinc-200">
+            <div className="hidden lg:block pt-4 mt-4 border-t border-zinc-200">
               <a 
                 href={`/s/${empresa?.slug}`} 
                 target="_blank"
@@ -120,11 +124,21 @@ export default function SiteEditor() {
 
           {/* Content Area */}
           <main className="flex-1 bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
-            <div className="p-8">
+            <div className="p-4 md:p-8">
               {activeTab === 'info' && <GeneralInfoForm empresa={empresa} setEmpresa={setEmpresa} onCorsError={() => setShowCorsModal(true)} />}
               {activeTab === 'categories' && <CategoriesForm empresa={empresa} setEmpresa={setEmpresa} />}
               {activeTab === 'services' && <ServicesForm empresa={empresa} onCorsError={() => setShowCorsModal(true)} />}
               {activeTab === 'gallery' && <GalleryForm empresa={empresa} setEmpresa={setEmpresa} onCorsError={() => setShowCorsModal(true)} />}
+            </div>
+            <div className="lg:hidden p-4 border-t border-zinc-100 bg-zinc-50">
+              <a 
+                href={`/s/${empresa?.slug}`} 
+                target="_blank"
+                className="flex items-center justify-center gap-3 px-4 py-3 text-sm font-bold text-emerald-600 bg-white border border-emerald-100 rounded-xl transition-all"
+              >
+                <Layout size={18} />
+                Ver meu site
+              </a>
             </div>
           </main>
         </div>
@@ -134,19 +148,20 @@ export default function SiteEditor() {
   );
 }
 
-function NavButton({ active, onClick, icon: Icon, label }: any) {
+function NavButton({ active, onClick, icon: Icon, label, fullLabel }: any) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
+        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap lg:w-full",
         active 
           ? "bg-white text-emerald-600 shadow-sm border border-zinc-200" 
           : "text-zinc-500 hover:bg-zinc-100"
       )}
     >
       <Icon size={18} />
-      {label}
+      <span className="hidden lg:inline">{fullLabel || label}</span>
+      <span className="lg:hidden">{label}</span>
     </button>
   );
 }
@@ -233,7 +248,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
   return (
     <form onSubmit={handleSave} className="space-y-8">
       {/* Visual Identity Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <div className="space-y-2">
           <label className="text-sm font-bold text-zinc-900">Logo</label>
           <div 
@@ -280,7 +295,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
           </div>
         </div>
 
-        <div className="md:col-span-2 space-y-2">
+        <div className="col-span-2 space-y-2">
           <label className="text-sm font-bold text-zinc-900">Capa do Site</label>
           <div 
             onClick={() => coverInputRef.current?.click()}
@@ -341,7 +356,7 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-zinc-700">WhatsApp de Contato</label>
           <input 
@@ -364,9 +379,9 @@ function GeneralInfoForm({ empresa, setEmpresa, onCorsError }: { empresa: Empres
                 ...empresa, 
                 settings: { ...empresa.settings, visibilityDays: parseInt(e.target.value) } 
               })}
-              className="w-24 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold"
+              className="w-20 sm:w-24 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold"
             />
-            <span className="text-xs text-zinc-500">Quantos dias o cliente pode ver no futuro.</span>
+            <span className="text-[10px] sm:text-xs text-zinc-500">Quantos dias o cliente pode ver no futuro.</span>
           </div>
         </div>
       </div>
@@ -674,7 +689,7 @@ function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | 
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -699,7 +714,7 @@ function GalleryForm({ empresa, setEmpresa, onCorsError }: { empresa: Empresa | 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 md:opacity-0 md:group-hover:opacity-100 transition-all flex items-center justify-center">
               <button 
                 onClick={() => handleDelete(url)}
                 className="p-2 bg-white text-red-500 rounded-full shadow-lg"

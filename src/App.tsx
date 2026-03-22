@@ -257,7 +257,7 @@ function AppLayout() {
         )}
       </nav>
 
-      <main className={cn("pt-16", isEmpresa && "pb-16 md:pb-0")}>
+      <main className={cn("pt-16", (isEmpresa || isProfissional) && "pb-16 md:pb-0")}>
         <Outlet />
       </main>
 

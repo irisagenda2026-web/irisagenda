@@ -291,7 +291,7 @@ export default function AvailabilityCalendar({
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 auto-rows-[140px]">
+        <div className="grid grid-cols-7 auto-rows-[80px] md:auto-rows-[140px]">
           {days.map((day, idx) => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const isSelected = selectedDates.includes(dateStr);
@@ -312,7 +312,7 @@ export default function AvailabilityCalendar({
                 key={dateStr}
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  "relative p-3 border-r border-b border-zinc-100 cursor-pointer transition-all group overflow-hidden",
+                  "relative p-2 md:p-3 border-r border-b border-zinc-100 cursor-pointer transition-all group overflow-hidden",
                   !isCurrentMonth && "bg-zinc-50/50 opacity-30",
                   isSelected && "bg-emerald-50/50 ring-2 ring-emerald-500 ring-inset z-10",
                   isToday(day) && "bg-zinc-50",
@@ -321,7 +321,7 @@ export default function AvailabilityCalendar({
               >
                 <div className="flex items-center justify-between relative z-10">
                   <span className={cn(
-                    "text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full transition-colors",
+                    "text-xs md:text-sm font-bold w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full transition-colors",
                     isToday(day) ? "bg-emerald-600 text-white" : "text-zinc-900",
                     isSelected && !isToday(day) && "bg-emerald-100 text-emerald-700"
                   )}>
@@ -329,44 +329,57 @@ export default function AvailabilityCalendar({
                   </span>
                   {override && (
                     <div className={cn(
-                      "px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-tighter",
+                      "px-1 md:px-1.5 py-0.5 rounded text-[7px] md:text-[8px] font-bold uppercase tracking-tighter",
                       override.isOpen ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"
                     )}>
-                      {override.isOpen ? 'Aberto' : 'Folga'}
+                      <span className="hidden xs:inline">{override.isOpen ? 'Aberto' : 'Folga'}</span>
+                      <span className="xs:hidden">{override.isOpen ? 'ON' : 'OFF'}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-2 space-y-1 relative z-10">
+                <div className="mt-1 md:mt-2 space-y-1 relative z-10">
                   {override?.isOpen ? (
-                    override.slots.slice(0, 3).map((slot, i) => (
-                      <div key={i} className="flex flex-col gap-0.5">
-                        <div className="text-[9px] bg-white border border-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded-md font-bold flex items-center justify-between shadow-sm">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-2 h-2 text-emerald-500" />
-                            {slot.start}
-                          </span>
-                          {slot.customPrice && (
-                            <span className="text-emerald-600">R${slot.customPrice}</span>
-                          )}
-                        </div>
-                        {slot.serviceIds && slot.serviceIds.length > 0 && (
-                          <div className="flex flex-wrap gap-0.5 px-0.5">
-                            {slot.serviceIds.slice(0, 2).map(sid => (
-                              <div key={sid} className="w-1.5 h-1.5 rounded-full bg-emerald-400" title={servicos.find(s => s.id === sid)?.name} />
-                            ))}
-                            {slot.serviceIds.length > 2 && <span className="text-[7px] text-zinc-400">+{slot.serviceIds.length - 2}</span>}
-                          </div>
-                        )}
+                    <>
+                      {/* Mobile Indicator */}
+                      <div className="md:hidden flex flex-wrap gap-0.5 mt-1">
+                        {override.slots.map((_, i) => (
+                          <div key={i} className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        ))}
                       </div>
-                    ))
+                      {/* Desktop Slots */}
+                      <div className="hidden md:block space-y-1">
+                        {override.slots.slice(0, 3).map((slot, i) => (
+                          <div key={i} className="flex flex-col gap-0.5">
+                            <div className="text-[9px] bg-white border border-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded-md font-bold flex items-center justify-between shadow-sm">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-2 h-2 text-emerald-500" />
+                                {slot.start}
+                              </span>
+                              {slot.customPrice && (
+                                <span className="text-emerald-600">R${slot.customPrice}</span>
+                              )}
+                            </div>
+                            {slot.serviceIds && slot.serviceIds.length > 0 && (
+                              <div className="flex flex-wrap gap-0.5 px-0.5">
+                                {slot.serviceIds.slice(0, 2).map(sid => (
+                                  <div key={sid} className="w-1.5 h-1.5 rounded-full bg-emerald-400" title={servicos.find(s => s.id === sid)?.name} />
+                                ))}
+                                {slot.serviceIds.length > 2 && <span className="text-[7px] text-zinc-400">+{slot.serviceIds.length - 2}</span>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   ) : override ? (
-                    <div className="h-full flex items-center justify-center pt-4 opacity-20">
-                      <X className="w-8 h-8 text-red-500" />
+                    <div className="h-full flex items-center justify-center pt-2 md:pt-4 opacity-20">
+                      <X className="w-4 h-4 md:w-8 md:h-8 text-red-500" />
                     </div>
                   ) : (
-                    <div className="text-[9px] text-zinc-300 italic font-medium pt-1">
-                      Horário Padrão
+                    <div className="text-[8px] md:text-[9px] text-zinc-300 italic font-medium pt-1">
+                      <span className="hidden xs:inline">Horário Padrão</span>
+                      <span className="xs:hidden">Padrão</span>
                     </div>
                   )}
                 </div>
@@ -390,164 +403,163 @@ export default function AvailabilityCalendar({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-zinc-200"
+              className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-zinc-200 flex flex-col max-h-[90vh]"
             >
-              <div className="p-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+              <div className="p-5 md:p-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50 shrink-0">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="bg-emerald-100 text-emerald-600 p-2 rounded-xl">
-                      <CalendarIcon className="w-5 h-5" />
+                    <div className="bg-emerald-100 text-emerald-600 p-1.5 md:p-2 rounded-xl">
+                      <CalendarIcon className="w-4 h-4 md:w-5 md:h-5" />
                     </div>
-                    <h3 className="text-2xl font-bold text-zinc-900 tracking-tight">
+                    <h3 className="text-lg md:text-2xl font-bold text-zinc-900 tracking-tight">
                       {selectedDates.length === 1 
                         ? format(parseISO(selectedDates[0]), "dd 'de' MMMM", { locale: ptBR })
                         : `${selectedDates.length} dias selecionados`
                       }
                     </h3>
                   </div>
-                  <p className="text-sm text-zinc-500 font-medium">Configure turnos, preços e serviços específicos.</p>
+                  <p className="text-xs md:text-sm text-zinc-500 font-medium">Configure turnos, preços e serviços específicos.</p>
                 </div>
                 <button 
                   onClick={() => setIsEditing(false)}
-                  className="p-3 hover:bg-zinc-200 rounded-2xl transition-all"
+                  className="p-2 md:p-3 hover:bg-zinc-200 rounded-2xl transition-all"
                 >
-                  <X className="w-6 h-6 text-zinc-400" />
+                  <X className="w-5 h-5 md:w-6 md:h-6 text-zinc-400" />
                 </button>
               </div>
 
-              <div className="p-8 space-y-8 max-h-[65vh] overflow-y-auto custom-scrollbar">
+              <div className="p-5 md:p-8 space-y-6 md:space-y-8 overflow-y-auto custom-scrollbar flex-1">
                 {/* Status Toggle */}
-                <div className="flex items-center justify-between p-6 bg-zinc-50 rounded-[2rem] border border-zinc-100 shadow-inner">
-                  <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between p-4 md:p-6 bg-zinc-50 rounded-2xl md:rounded-[2rem] border border-zinc-100 shadow-inner">
+                  <div className="flex items-center gap-3 md:gap-4">
                     <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm",
+                      "w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center transition-all shadow-sm",
                       editIsOpen ? "bg-emerald-600 text-white" : "bg-red-500 text-white"
                     )}>
-                      {editIsOpen ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
+                      {editIsOpen ? <Check className="w-5 h-5 md:w-6 md:h-6" /> : <X className="w-5 h-5 md:w-6 md:h-6" />}
                     </div>
                     <div>
-                      <p className="font-bold text-zinc-900 text-lg">Disponibilidade do Dia</p>
-                      <p className="text-sm text-zinc-500">{editIsOpen ? 'Empresa aberta para novos agendamentos' : 'Dia fechado para folga ou feriado'}</p>
+                      <p className="font-bold text-zinc-900 text-base md:text-lg">Disponibilidade do Dia</p>
+                      <p className="text-xs md:text-sm text-zinc-500">{editIsOpen ? 'Empresa aberta' : 'Dia fechado'}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setEditIsOpen(!editIsOpen)}
                     className={cn(
-                      "relative inline-flex h-8 w-14 items-center rounded-full transition-all shadow-sm",
+                      "relative inline-flex h-7 w-12 md:h-8 md:w-14 items-center rounded-full transition-all shadow-sm",
                       editIsOpen ? "bg-emerald-600" : "bg-zinc-300"
                     )}
                   >
                     <span className={cn(
-                      "inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-md",
-                      editIsOpen ? "translate-x-7" : "translate-x-1"
+                      "inline-block h-5 w-5 md:h-6 md:w-6 transform rounded-full bg-white transition-transform shadow-md",
+                      editIsOpen ? "translate-x-6 md:translate-x-7" : "translate-x-1"
                     )} />
                   </button>
                 </div>
 
                 {editIsOpen && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 md:space-y-6">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-emerald-600" />
-                        Turnos de Atendimento
+                      <h4 className="text-base md:text-lg font-bold text-zinc-900 flex items-center gap-2">
+                        <Clock className="w-4 h-4 md:w-5 md:h-5 text-emerald-600" />
+                        Turnos
                       </h4>
                       <button 
                         onClick={addSlot}
-                        className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-100"
+                        className="bg-emerald-50 text-emerald-600 px-3 py-1.5 md:px-4 md:py-2 rounded-xl font-bold text-xs md:text-sm hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-100"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-3 h-3 md:w-4 md:h-4" />
                         Novo Turno
                       </button>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-6">
                       {editSlots.map((slot, index) => (
                         <motion.div 
                           layout
                           key={index} 
-                          className="p-6 rounded-[2rem] border border-zinc-200 space-y-6 bg-white shadow-sm relative group"
+                          className="p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-zinc-200 space-y-4 md:space-y-6 bg-white shadow-sm relative group"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center bg-zinc-100 rounded-2xl p-1.5 border border-zinc-200 shadow-inner">
+                            <div className="flex items-center gap-2 md:gap-4">
+                              <div className="flex items-center bg-zinc-100 rounded-xl md:rounded-2xl p-1 md:p-1.5 border border-zinc-200 shadow-inner">
                                 <input
                                   type="time"
                                   value={slot.start}
                                   onChange={(e) => updateSlot(index, 'start', e.target.value)}
-                                  className="bg-transparent border-none focus:ring-0 text-zinc-900 font-bold px-4 py-2 text-lg"
+                                  className="bg-transparent border-none focus:ring-0 text-zinc-900 font-bold px-2 md:px-4 py-1 md:py-2 text-sm md:text-lg w-20 md:w-auto"
                                 />
-                                <span className="text-zinc-400 font-black px-2">→</span>
+                                <span className="text-zinc-400 font-black px-1 md:px-2">→</span>
                                 <input
                                   type="time"
                                   value={slot.end}
                                   onChange={(e) => updateSlot(index, 'end', e.target.value)}
-                                  className="bg-transparent border-none focus:ring-0 text-zinc-900 font-bold px-4 py-2 text-lg"
+                                  className="bg-transparent border-none focus:ring-0 text-zinc-900 font-bold px-2 md:px-4 py-1 md:py-2 text-sm md:text-lg w-20 md:w-auto"
                                 />
                               </div>
                             </div>
                             <button 
                               onClick={() => removeSlot(index)}
-                              className="p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+                              className="p-2 md:p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-xl md:rounded-2xl transition-all"
                             >
-                              <Trash2 className="w-5 h-5" />
+                              <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                             </button>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                             {/* Service Selection Checklist */}
-                            <div className="space-y-3">
-                              <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                <Tag className="w-4 h-4" />
+                            <div className="space-y-2 md:space-y-3">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                                <Tag className="w-3 h-3 md:w-4 h-4" />
                                 Serviços Permitidos
                               </label>
-                              <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                              <div className="grid grid-cols-1 gap-1.5 md:gap-2 max-h-32 md:max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                                 <button
                                   onClick={() => updateSlot(index, 'serviceIds', [])}
                                   className={cn(
-                                    "flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium transition-all",
+                                    "flex items-center justify-between px-3 py-2 md:px-4 md:py-3 rounded-xl border text-xs md:text-sm font-medium transition-all",
                                     (!slot.serviceIds || slot.serviceIds.length === 0)
                                       ? "bg-emerald-600 border-emerald-600 text-white shadow-md"
                                       : "bg-zinc-50 border-zinc-100 text-zinc-600 hover:bg-zinc-100"
                                   )}
                                 >
-                                  Todos os Serviços
-                                  {(!slot.serviceIds || slot.serviceIds.length === 0) && <Check className="w-4 h-4" />}
+                                  Todos
+                                  {(!slot.serviceIds || slot.serviceIds.length === 0) && <Check className="w-3 h-3 md:w-4 h-4" />}
                                 </button>
                                 {servicos.map(s => (
                                   <button
                                     key={s.id}
                                     onClick={() => toggleServiceInSlot(index, s.id)}
                                     className={cn(
-                                      "flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium transition-all",
+                                      "flex items-center justify-between px-3 py-2 md:px-4 md:py-3 rounded-xl border text-xs md:text-sm font-medium transition-all",
                                       slot.serviceIds?.includes(s.id)
                                         ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
                                         : "bg-white border-zinc-100 text-zinc-600 hover:bg-zinc-50"
                                     )}
                                   >
                                     {s.name}
-                                    {slot.serviceIds?.includes(s.id) && <Check className="w-4 h-4" />}
+                                    {slot.serviceIds?.includes(s.id) && <Check className="w-3 h-3 md:w-4 h-4" />}
                                   </button>
                                 ))}
                               </div>
                             </div>
 
                             {/* Custom Price */}
-                            <div className="space-y-3">
-                              <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                <DollarSign className="w-4 h-4" />
-                                Preço Especial (Opcional)
+                            <div className="space-y-2 md:space-y-3">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                                <DollarSign className="w-3 h-3 md:w-4 h-4" />
+                                Preço Especial
                               </label>
                               <div className="relative group/input">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-lg group-focus-within/input:text-emerald-600 transition-colors">R$</div>
+                                <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-base md:text-lg group-focus-within/input:text-emerald-600 transition-colors">R$</div>
                                 <input
                                   type="number"
-                                  placeholder="Preço padrão do serviço"
+                                  placeholder="Preço padrão"
                                   value={slot.customPrice || ''}
                                   onChange={(e) => updateSlot(index, 'customPrice', parseFloat(e.target.value))}
-                                  className="w-full pl-12 pr-6 py-4 bg-zinc-50 border-zinc-200 rounded-2xl text-lg font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                                  className="w-full pl-10 md:pl-12 pr-4 md:pr-6 py-3 md:py-4 bg-zinc-50 border-zinc-200 rounded-xl md:rounded-2xl text-base md:text-lg font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                                 />
                               </div>
-                              <p className="text-[10px] text-zinc-400 font-medium italic">Deixe vazio para usar o preço original do serviço.</p>
                             </div>
                           </div>
                         </motion.div>
@@ -557,19 +569,19 @@ export default function AvailabilityCalendar({
                 )}
               </div>
 
-              <div className="p-8 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-4">
+              <div className="p-5 md:p-8 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-3 md:gap-4 shrink-0">
                 <button 
                   onClick={() => setIsEditing(false)}
-                  className="px-8 py-4 rounded-2xl font-bold text-zinc-500 hover:bg-zinc-200 transition-all"
+                  className="px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-bold text-zinc-500 hover:bg-zinc-200 transition-all text-sm md:text-base"
                 >
-                  Descartar
+                  Cancelar
                 </button>
                 <button 
                   onClick={saveChanges}
-                  className="bg-zinc-900 text-white px-10 py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-xl flex items-center gap-2"
+                  className="bg-zinc-900 text-white px-6 md:px-10 py-3 md:py-4 rounded-xl md:rounded-2xl font-bold hover:bg-black transition-all shadow-xl flex items-center gap-2 text-sm md:text-base"
                 >
-                  <Save className="w-5 h-5" />
-                  Aplicar Configuração
+                  <Save className="w-4 h-4 md:w-5 md:h-5" />
+                  Salvar
                 </button>
               </div>
             </motion.div>
