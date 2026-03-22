@@ -14,6 +14,7 @@ import BusinessHoursPage from './pages/dashboard/BusinessHoursPage';
 import ProfilePage from './pages/dashboard/ProfilePage';
 import MarketingPage from './pages/dashboard/MarketingPage';
 import NPSPage from './pages/dashboard/NPSPage';
+import SubscriptionSettings from './pages/dashboard/SubscriptionSettings';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ClientDashboard from './pages/client/ClientDashboard';
 import PublicSite from './pages/public/PublicSite';
@@ -44,6 +45,7 @@ import {
 import { useState } from 'react';
 import { cn } from './utils/cn';
 import Logo from './components/Logo';
+import SubscriptionBanner from './components/dashboard/SubscriptionBanner';
 
 function NavLink({ to, icon: Icon, label, active }: any) {
   return (
@@ -91,6 +93,7 @@ function AppLayout() {
 
   return (
     <>
+      {isEmpresa && <SubscriptionBanner />}
       <nav className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 z-40">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
@@ -128,6 +131,7 @@ function AppLayout() {
                 )}
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
                 <NavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
+                <NavLink to="/dashboard/subscription" icon={CreditCard} label="Assinatura" active={location.pathname === '/dashboard/subscription'} />
                 <NavLink to="/dashboard/profile" icon={User} label="Perfil" active={location.pathname === '/dashboard/profile'} />
               </>
             )}
@@ -290,6 +294,7 @@ export default function App() {
                 <Route path="/dashboard/disponibilidade" element={<ProtectedRoute allowedRoles={['empresa', 'profissional']}><BusinessHoursPage /></ProtectedRoute>} />
                 <Route path="/dashboard/marketing" element={<ProtectedRoute allowedRoles={['empresa']}><MarketingPage /></ProtectedRoute>} />
                 <Route path="/dashboard/nps" element={<ProtectedRoute allowedRoles={['empresa']}><NPSPage /></ProtectedRoute>} />
+                <Route path="/dashboard/subscription" element={<ProtectedRoute allowedRoles={['empresa']}><SubscriptionSettings /></ProtectedRoute>} />
                 <Route path="/dashboard/profile" element={<ProtectedRoute allowedRoles={['empresa', 'profissional', 'cliente']}><ProfilePage /></ProtectedRoute>} />
                 <Route path="/dashboard/site" element={<ProtectedRoute allowedRoles={['empresa', 'admin']}><SiteEditor /></ProtectedRoute>} />
 

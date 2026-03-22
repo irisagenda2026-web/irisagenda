@@ -26,7 +26,8 @@ import {
   Profissional, 
   AvailabilityOverride,
   Coupon,
-  Upsell
+  Upsell,
+  Plan
 } from '../types/firebase';
 
 // Platform Settings
@@ -42,6 +43,15 @@ export const updatePlatformSettings = async (data: Partial<PlatformSettings>) =>
 };
 
 // Users
+export const createUser = async (id: string, data: Omit<User, 'id' | 'createdAt'>) => {
+  const docRef = doc(db, 'users', id);
+  await setDoc(docRef, {
+    ...data,
+    id,
+    createdAt: Date.now(),
+  });
+};
+
 export const getAllUsers = async () => {
   const q = query(collection(db, 'users'));
   const querySnapshot = await getDocs(q);
@@ -225,6 +235,25 @@ export const getAgendamentosByCliente = async (clienteId: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Agendamento));
 };
 
+// Plans
+export const getPlans = async () => {
+  const q = query(collection(db, 'plans'), where('isActive', '==', true));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Plan));
+};
+
+export const createPlan = async (data: Omit<Plan, 'id' | 'createdAt'>) => {
+  return await addDoc(collection(db, 'plans'), {
+    ...data,
+    createdAt: Date.now(),
+  });
+};
+
+export const updatePlan = async (id: string, data: Partial<Plan>) => {
+  const docRef = doc(db, 'plans', id);
+  await updateDoc(docRef, data);
+};
+
 // Reviews
 export const getReviews = async (empresaId: string) => {
   // OPTIMIZATION: Client-side sort to avoid index requirement
@@ -236,6 +265,12 @@ export const getReviews = async (empresaId: string) => {
   const reviews = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
   
   return reviews.sort((a, b) => b.createdAt - a.createdAt);
+};
+
+// Empresa Subscription
+export const updateEmpresaSubscription = async (empresaId: string, data: Partial<Empresa['subscription']>) => {
+  const docRef = doc(db, 'empresas', empresaId);
+  await updateDoc(docRef, { subscription: data });
 };
 
 export const getReviewsByProfissional = async (empresaId: string, profissionalId: string) => {

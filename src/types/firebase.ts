@@ -15,6 +15,28 @@ export interface User {
   phone?: string;
 }
 
+export interface Plan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  interval: 'monthly' | 'yearly';
+  features: string[];
+  permissions: {
+    maxProfessionals: number;
+    maxServices: number;
+    hasUpsells: boolean;
+    hasCoupons: boolean;
+    hasReviews: boolean;
+    hasCustomBranding: boolean;
+    hasNPS: boolean;
+    hasMarketing: boolean;
+  };
+  isActive: boolean;
+  trialDays: number;
+  createdAt: number;
+}
+
 export interface Empresa {
   id: string;
   name: string;
@@ -29,7 +51,18 @@ export interface Empresa {
   category: 'beauty' | 'aesthetics' | 'health';
   serviceCategories?: string[]; // Custom categories created by the company
   ownerId: string;
-  plan: 'essencial' | 'profissional' | 'enterprise';
+  planId: string; // Reference to Plan.id
+  subscription: {
+    status: 'trialing' | 'active' | 'past_due' | 'canceled';
+    trialEndsAt: number;
+    currentPeriodEnd: number;
+    cancelAtPeriodEnd: boolean;
+    paymentMethod?: {
+      brand: string;
+      last4: string;
+      cardToken?: string; // For future Pagar.me integration
+    };
+  };
   settings: {
     primaryColor: string;
     secondaryColor: string;

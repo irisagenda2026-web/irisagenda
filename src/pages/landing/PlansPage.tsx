@@ -5,23 +5,26 @@ import { useNavigate } from 'react-router-dom';
 
 const plans = [
   {
+    id: 'essencial',
     name: 'Essencial',
-    price: 'R$ 89',
+    price: 89,
     description: 'Perfeito para profissionais autônomos.',
     features: [
-      'Agenda Online',
+      'Agenda Online Inteligente',
       'Até 2 profissionais',
       'Até 100 agendamentos/mês',
-      'Lembretes via WhatsApp (limitado)',
-      'Mini-site básico',
-      'Suporte via Chat'
+      'Lembretes via WhatsApp',
+      'Mini-site personalizado',
+      'Suporte prioritário'
     ],
     highlight: false,
-    icon: Star
+    icon: Star,
+    trialDays: 15
   },
   {
+    id: 'profissional',
     name: 'Profissional',
-    price: 'R$ 159',
+    price: 159,
     description: 'O melhor para clínicas em crescimento.',
     features: [
       'Tudo do Essencial',
@@ -29,114 +32,150 @@ const plans = [
       'WhatsApp API ilimitado',
       'Gestão Financeira completa',
       'Marketing & Ofertas',
-      'NPS Automático'
+      'NPS & Pesquisas de Satisfação',
+      'Relatórios de Performance'
     ],
     highlight: true,
-    icon: Zap
+    icon: Zap,
+    trialDays: 15
   },
   {
+    id: 'enterprise',
     name: 'Enterprise',
-    price: 'Sob consulta',
+    price: 499,
     description: 'Para redes e grandes centros de estética.',
     features: [
       'Tudo do Profissional',
-      'Multi-unidades',
+      'Multi-unidades (Franquias)',
       'Relatórios customizados',
       'Gerente de conta dedicado',
-      'Treinamento VIP',
-      'API de integração'
+      'Treinamento VIP para equipe',
+      'API de integração aberta',
+      'SLA de suporte 24/7'
     ],
     highlight: false,
-    icon: Shield
+    icon: Shield,
+    trialDays: 15
   }
 ];
 
 export default function PlansPage() {
   const navigate = useNavigate();
 
-  const handleSelectPlan = (planName: string) => {
-    navigate(`/signup?plan=${planName}`);
+  const handleSelectPlan = (planId: string) => {
+    navigate(`/signup?plan=${planId}`);
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 py-24 px-4">
+    <div className="min-h-screen bg-white py-24 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-sm font-bold mb-6"
+          >
+            <Zap size={16} />
+            TESTE GRÁTIS POR 15 DIAS
+          </motion.div>
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-bold text-zinc-900 mb-4"
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-6xl font-black text-zinc-900 mb-6 tracking-tight"
           >
-            Escolha o plano ideal para o seu negócio
+            Invista no futuro da sua clínica.
           </motion.h2>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-zinc-600 text-lg max-w-2xl mx-auto"
+            transition={{ delay: 0.2 }}
+            className="text-zinc-500 text-xl max-w-2xl mx-auto font-medium"
           >
-            Transforme a gestão da sua clínica com a Iris Agenda. Planos flexíveis que crescem com você.
+            Escolha o plano que melhor se adapta ao seu momento. Cancele quando quiser, sem letras miúdas.
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
           {plans.map((plan, index) => (
             <motion.div
-              key={plan.name}
+              key={plan.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.1 + 0.3 }}
               className={cn(
-                "relative p-8 rounded-3xl border bg-white shadow-sm transition-all hover:shadow-xl flex flex-col",
-                plan.highlight ? "border-emerald-500 ring-4 ring-emerald-500/10" : "border-zinc-200"
+                "relative p-10 rounded-[40px] border transition-all hover:scale-[1.02] flex flex-col",
+                plan.highlight 
+                  ? "border-zinc-900 bg-zinc-900 text-white shadow-2xl shadow-zinc-900/20" 
+                  : "border-zinc-200 bg-white text-zinc-900"
               )}
             >
               {plan.highlight && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-bold">
-                  MAIS POPULAR
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-6 py-1.5 rounded-full text-xs font-black tracking-widest uppercase">
+                  RECOMENDADO
                 </div>
               )}
 
-              <div className="flex items-center gap-3 mb-6">
-                <div className={cn(
-                  "p-3 rounded-2xl",
-                  plan.highlight ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-600"
-                )}>
-                  <plan.icon size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-zinc-900">{plan.name}</h3>
-                  <p className="text-sm text-zinc-500">{plan.description}</p>
-                </div>
+              <div className="mb-10">
+                <h3 className={cn(
+                  "text-2xl font-black mb-2",
+                  plan.highlight ? "text-white" : "text-zinc-900"
+                )}>{plan.name}</h3>
+                <p className={cn(
+                  "text-sm font-medium",
+                  plan.highlight ? "text-zinc-400" : "text-zinc-500"
+                )}>{plan.description}</p>
               </div>
 
-              <div className="mb-8">
-                <span className="text-4xl font-bold text-zinc-900">{plan.price}</span>
-                {plan.price !== 'Sob consulta' && <span className="text-zinc-500 ml-1">/mês</span>}
+              <div className="mb-10">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-bold opacity-60">R$</span>
+                  <span className="text-6xl font-black tracking-tighter">{plan.price}</span>
+                  <span className="text-sm font-bold opacity-60">/mês</span>
+                </div>
+                <p className="text-xs font-bold text-emerald-500 mt-2">
+                  + {plan.trialDays} dias de teste grátis
+                </p>
               </div>
 
-              <ul className="space-y-4 mb-8 flex-1">
+              <div className={cn(
+                "h-px w-full mb-10",
+                plan.highlight ? "bg-white/10" : "bg-zinc-100"
+              )} />
+
+              <ul className="space-y-5 mb-12 flex-1">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3 text-zinc-600">
-                    <Check className="text-emerald-500 mt-1 shrink-0" size={18} />
-                    <span>{feature}</span>
+                  <li key={feature} className="flex items-start gap-3 text-sm font-medium">
+                    <Check className={cn(
+                      "mt-0.5 shrink-0",
+                      plan.highlight ? "text-emerald-400" : "text-emerald-500"
+                    )} size={18} />
+                    <span className={plan.highlight ? "text-zinc-300" : "text-zinc-600"}>{feature}</span>
                   </li>
                 ))}
               </ul>
 
               <button 
-                onClick={() => handleSelectPlan(plan.name)}
+                onClick={() => handleSelectPlan(plan.id)}
                 className={cn(
-                  "w-full py-4 rounded-2xl font-bold transition-all mt-auto",
+                  "w-full py-5 rounded-2xl font-black transition-all text-sm uppercase tracking-widest",
                   plan.highlight 
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20" 
-                    : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                    ? "bg-white text-zinc-900 hover:bg-zinc-100" 
+                    : "bg-zinc-900 text-white hover:bg-zinc-800"
                 )}
               >
-                {plan.name === 'Enterprise' ? 'Falar com Consultor' : 'Começar Agora'}
+                {plan.id === 'enterprise' ? 'Falar com Especialista' : 'Iniciar Teste Grátis'}
               </button>
             </motion.div>
           ))}
+        </div>
+
+        <div className="bg-zinc-50 rounded-[40px] p-12 text-center border border-zinc-100">
+          <h3 className="text-2xl font-black text-zinc-900 mb-4">Ainda tem dúvidas?</h3>
+          <p className="text-zinc-500 font-medium mb-8">Nossa equipe está pronta para ajudar você a escolher o melhor caminho.</p>
+          <button className="px-10 py-4 bg-white border border-zinc-200 rounded-2xl font-bold text-zinc-900 hover:bg-zinc-50 transition-all">
+            Ver Comparativo Completo
+          </button>
         </div>
       </div>
     </div>

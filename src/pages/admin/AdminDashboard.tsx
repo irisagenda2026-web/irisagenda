@@ -16,16 +16,17 @@ import {
   Sparkles
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { createEmpresa, addServico, createAgendamento, getAllEmpresas, getAllUsers } from '../../services/db';
+import { createEmpresa, addServico, createAgendamento, getAllEmpresas, getAllUsers, getPlans, createPlan } from '../../services/db';
 import { auth } from '../../services/firebase';
-import { Empresa, User } from '../../types/firebase';
+import { Empresa, User, Plan } from '../../types/firebase';
 import Logo from '../../components/Logo';
 import AdminSettings from './AdminSettings';
 
 export default function AdminDashboard() {
   const [clinics, setClinics] = useState<Empresa[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [activeTab, setActiveTab] = useState<'clinics' | 'users' | 'settings'>('clinics');
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [activeTab, setActiveTab] = useState<'clinics' | 'users' | 'plans' | 'settings'>('clinics');
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalClinics: 0,
@@ -37,26 +38,80 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [clinicsData, usersData] = await Promise.all([
+      const [clinicsData, usersData, plansData] = await Promise.all([
         getAllEmpresas(),
-        getAllUsers()
+        getAllUsers(),
+        getPlans()
       ]);
+
+      if (plansData.length === 0) {
+        // Auto-seed basic plans if none exist
+        const defaultPlans = [
+          {
+            name: 'Essencial',
+            price: 89,
+            interval: 'monthly' as const,
+            description: 'Perfeito para profissionais autônomos.',
+            features: ['Agenda Online', 'Até 2 profissionais', 'Lembretes WhatsApp'],
+            permissions: { 
+              maxProfessionals: 2, 
+              maxServices: 10,
+              hasUpsells: false, 
+              hasCoupons: false,
+              hasReviews: true,
+              hasCustomBranding: false, 
+              hasNPS: false,
+              hasMarketing: false
+            },
+            isActive: true,
+            trialDays: 15
+          },
+          {
+            name: 'Profissional',
+            price: 159,
+            interval: 'monthly' as const,
+            description: 'O melhor para clínicas em crescimento.',
+            features: ['Tudo do Essencial', 'Agendamentos ilimitados', 'Gestão Financeira'],
+            permissions: { 
+              maxProfessionals: 10, 
+              maxServices: 50,
+              hasUpsells: true, 
+              hasCoupons: true,
+              hasReviews: true,
+              hasCustomBranding: true, 
+              hasNPS: true,
+              hasMarketing: true
+            },
+            isActive: true,
+            trialDays: 15
+          }
+        ];
+        for (const p of defaultPlans) {
+          await createPlan(p);
+        }
+        fetchData(); // Refresh
+        return;
+      }
 
       // Transform data for the table
       const formattedClinics = clinicsData.map(emp => ({
         ...emp,
         owner: 'Dono (ID: ' + emp.ownerId.slice(0, 4) + ')',
-        status: 'active', // Mock status
-        revenue: 0, // Mock revenue
+        status: emp.subscription?.status || 'active',
+        revenue: plansData.find(p => p.id === emp.planId)?.price || 0,
         joined: new Date(emp.createdAt).toLocaleDateString('pt-BR')
       }));
       setClinics(formattedClinics as any);
       setUsers(usersData);
+      setPlans(plansData);
       
       setStats({
         totalClinics: clinicsData.length,
-        activeSubscriptions: clinicsData.filter(c => c.plan !== 'essencial').length,
-        monthlyRevenue: clinicsData.reduce((acc, c) => acc + (c.plan === 'profissional' ? 159 : c.plan === 'enterprise' ? 499 : 0), 0),
+        activeSubscriptions: clinicsData.filter(c => c.subscription?.status === 'active').length,
+        monthlyRevenue: clinicsData.reduce((acc, c) => {
+          const plan = plansData.find(p => p.id === c.planId);
+          return acc + (plan?.price || 0);
+        }, 0),
         newClinicsToday: clinicsData.filter(c => new Date(c.createdAt).toDateString() === new Date().toDateString()).length
       });
     } catch (err) {
@@ -110,6 +165,15 @@ export default function AdminDashboard() {
                 Usuários
               </button>
               <button 
+                onClick={() => setActiveTab('plans')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                  activeTab === 'plans' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"
+                )}
+              >
+                Planos
+              </button>
+              <button 
                 onClick={() => setActiveTab('settings')}
                 className={cn(
                   "px-4 py-2 rounded-xl text-sm font-bold transition-all",
@@ -137,6 +201,37 @@ export default function AdminDashboard() {
           <div className="overflow-x-auto">
             {activeTab === 'settings' ? (
               <AdminSettings />
+            ) : activeTab === 'plans' ? (
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-bold text-zinc-900">Gerenciar Planos</h3>
+                  <button className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all">
+                    Criar Novo Plano
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {plans.map(plan => (
+                    <div key={plan.id} className="bg-zinc-50 rounded-3xl p-6 border border-zinc-200">
+                      <div className="flex justify-between items-start mb-4">
+                        <h4 className="text-lg font-bold text-zinc-900">{plan.name}</h4>
+                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">ATIVO</span>
+                      </div>
+                      <div className="text-2xl font-black text-zinc-900 mb-4">R$ {plan.price}/mês</div>
+                      <ul className="space-y-2 mb-6">
+                        {plan.features.slice(0, 3).map((f, i) => (
+                          <li key={i} className="text-xs text-zinc-500 flex items-center gap-2">
+                            <CheckCircle2 size={12} className="text-emerald-500" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                      <button className="w-full py-2 bg-white border border-zinc-200 rounded-xl text-xs font-bold hover:bg-zinc-100 transition-all">
+                        Editar Plano
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : activeTab === 'clinics' ? (
               <table className="w-full text-left border-collapse">
                 <thead>
