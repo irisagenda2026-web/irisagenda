@@ -84,6 +84,22 @@ export interface Review {
   rating: number; // 1-5
   comment: string;
   clienteName: string;
+  sentiment?: 'positive' | 'neutral' | 'negative';
+  createdAt: number;
+}
+
+export interface Coupon {
+  id: string;
+  empresaId: string;
+  code: string;
+  discount: number;
+  type: 'percentage' | 'fixed';
+  minPurchase?: number;
+  maxDiscount?: number;
+  expiryDate: number;
+  usageLimit?: number;
+  usageCount: number;
+  isActive: boolean;
   createdAt: number;
 }
 

@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { auth } from '@/src/services/firebase';
-import { getAgendamentos, getServicos, getProfissionais, getAllAgendamentos, updateAgendamentoStatus, calculateCommission } from '@/src/services/db';
-import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
+import { getAgendamentos, getServicos, getProfissionais, getAllAgendamentos, updateAgendamentoStatus, calculateCommission, getReviews, getReviewsByProfissional } from '@/src/services/db';
+import { Agendamento, Servico, Profissional, Review } from '@/src/types/firebase';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -18,6 +18,7 @@ export default function MainDashboard() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [rating, setRating] = useState('0.0');
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
@@ -29,11 +30,22 @@ export default function MainDashboard() {
       const tonight = new Date();
       tonight.setHours(23,59,59,999);
 
-      const [agData, svData, allAgData] = await Promise.all([
+      const [agData, svData, allAgData, reviewsData] = await Promise.all([
         getAgendamentos(authUser.empresaId, today.getTime(), tonight.getTime()),
         getServicos(authUser.empresaId),
-        role === 'profissional' ? getAllAgendamentos(authUser.empresaId) : Promise.resolve([])
+        role === 'profissional' ? getAllAgendamentos(authUser.empresaId) : Promise.resolve([]),
+        role === 'profissional' && currentProfissional 
+          ? getReviewsByProfissional(authUser.empresaId, currentProfissional.id)
+          : getReviews(authUser.empresaId)
       ]);
+
+      // Calculate average rating
+      if (reviewsData.length > 0) {
+        const avg = reviewsData.reduce((acc, r) => acc + r.rating, 0) / reviewsData.length;
+        setRating(avg.toFixed(1));
+      } else {
+        setRating('5.0'); // Default for new accounts
+      }
 
       let filteredAg = agData;
       if (role === 'profissional' && currentProfissional) {
@@ -64,7 +76,7 @@ export default function MainDashboard() {
 
   useEffect(() => {
     loadData();
-  }, [role, authUser]);
+  }, [role, authUser, currentProfissional]);
 
   const stats = useMemo(() => [
     { 
@@ -104,8 +116,8 @@ export default function MainDashboard() {
       bg: role === 'profissional' ? 'bg-blue-50' : 'bg-blue-50' 
     },
     { label: 'Novos Clientes', value: agendamentos.length > 0 ? Math.floor(agendamentos.length * 0.7) : 0, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Avaliação', value: '4.9', icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' },
-  ], [role, agendamentos, servicos, currentProfissional, totalBalance]);
+    { label: 'Avaliação', value: rating, icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' },
+  ], [role, agendamentos, servicos, currentProfissional, totalBalance, rating]);
 
   return (
     <div className="p-4 md:p-8 bg-zinc-50 min-h-screen pb-24 md:pb-8">

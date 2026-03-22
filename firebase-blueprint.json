@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Application user profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "empresa", "profissional", "cliente", "guest"] },
+        "empresaId": { "type": "string" },
+        "phone": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Empresa": {
+      "title": "Empresa",
+      "description": "Business or clinic profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "category": { "type": "string", "enum": ["beauty", "aesthetics", "health"] },
+        "ownerId": { "type": "string" },
+        "plan": { "type": "string", "enum": ["essencial", "profissional", "enterprise"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "name", "slug", "ownerId", "plan"]
+    },
+    "Servico": {
+      "title": "Servico",
+      "description": "Service offered by a company",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empresaId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "durationMinutes": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "empresaId", "name", "price", "durationMinutes", "isActive"]
+    },
+    "Agendamento": {
+      "title": "Agendamento",
+      "description": "Appointment booking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empresaId": { "type": "string" },
+        "clienteId": { "type": "string" },
+        "servicoId": { "type": "string" },
+        "profissionalId": { "type": "string" },
+        "startTime": { "type": "number" },
+        "endTime": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled", "completed"] },
+        "totalPrice": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "empresaId", "clienteId", "servicoId", "profissionalId", "startTime", "endTime", "status", "totalPrice"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer review for an appointment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empresaId": { "type": "string" },
+        "agendamentoId": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "clienteName": { "type": "string" },
+        "sentiment": { "type": "string", "enum": ["positive", "neutral", "negative"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "empresaId", "agendamentoId", "rating", "comment", "clienteName", "createdAt"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Marketing discount coupon",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empresaId": { "type": "string" },
+        "code": { "type": "string" },
+        "discount": { "type": "number" },
+        "type": { "type": "string", "enum": ["percentage", "fixed"] },
+        "expiryDate": { "type": "number" },
+        "usageCount": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "empresaId", "code", "discount", "type", "expiryDate", "usageCount", "isActive", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/empresas/{empresaId}": { "schema": "Empresa", "description": "Company profiles" },
+    "/servicos/{servicoId}": { "schema": "Servico", "description": "Services" },
+    "/agendamentos/{agendamentoId}": { "schema": "Agendamento", "description": "Bookings" },
+    "/reviews/{reviewId}": { "schema": "Review", "description": "Customer reviews" },
+    "/coupons/{couponId}": { "schema": "Coupon", "description": "Discount coupons" }
+  }
+}

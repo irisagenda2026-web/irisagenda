@@ -15,7 +15,18 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Empresa, Servico, Agendamento, Bloqueio, Review, User, PlatformSettings, Profissional, AvailabilityOverride } from '../types/firebase';
+import { 
+  Empresa, 
+  Servico, 
+  Agendamento, 
+  Bloqueio, 
+  Review, 
+  User, 
+  PlatformSettings, 
+  Profissional, 
+  AvailabilityOverride,
+  Coupon
+} from '../types/firebase';
 
 // Platform Settings
 export const getPlatformSettings = async () => {
@@ -210,11 +221,65 @@ export const getReviews = async (empresaId: string) => {
   return reviews.sort((a, b) => b.createdAt - a.createdAt);
 };
 
+export const getReviewsByProfissional = async (empresaId: string, profissionalId: string) => {
+  const q = query(
+    collection(db, 'reviews'), 
+    where('empresaId', '==', empresaId),
+    where('profissionalId', '==', profissionalId)
+  );
+  const querySnapshot = await getDocs(q);
+  const reviews = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+  
+  return reviews.sort((a, b) => b.createdAt - a.createdAt);
+};
+
 export const addReview = async (data: Omit<Review, 'id' | 'createdAt'>) => {
   return await addDoc(collection(db, 'reviews'), {
     ...data,
     createdAt: Date.now(),
   });
+};
+
+// Coupons
+export const getCoupons = async (empresaId: string) => {
+  const q = query(
+    collection(db, 'coupons'),
+    where('empresaId', '==', empresaId)
+  );
+  const snapshot = await getDocs(q);
+  const coupons = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Coupon));
+  return coupons.sort((a, b) => b.createdAt - a.createdAt);
+};
+
+export const createCoupon = async (data: Omit<Coupon, 'id' | 'createdAt' | 'usageCount'>) => {
+  return await addDoc(collection(db, 'coupons'), {
+    ...data,
+    usageCount: 0,
+    createdAt: Date.now(),
+  });
+};
+
+export const updateCoupon = async (id: string, data: Partial<Coupon>) => {
+  const docRef = doc(db, 'coupons', id);
+  await updateDoc(docRef, data);
+};
+
+export const deleteCoupon = async (id: string) => {
+  await deleteDoc(doc(db, 'coupons', id));
+};
+
+// Marketing Stats
+export const getMarketingStats = async (empresaId: string) => {
+  // This is a simplified version. In a real app, you'd aggregate this data.
+  const coupons = await getCoupons(empresaId);
+  const totalUsage = coupons.reduce((acc, c) => acc + c.usageCount, 0);
+  
+  // Mocking some stats for now as we don't have a full tracking system yet
+  return {
+    reach: totalUsage * 8.5, // Estimated reach based on usage
+    usage: totalUsage,
+    revenue: totalUsage * 45 // Estimated revenue
+  };
 };
 
 // Bloqueios

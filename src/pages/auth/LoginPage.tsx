@@ -25,7 +25,7 @@ export default function LoginPage() {
       } else if (role === 'admin') {
         navigate('/admin/dashboard');
       } else if (role === 'empresa' || role === 'profissional') {
-        navigate('/dashboard/calendar');
+        navigate('/dashboard');
       } else {
         navigate('/my-appointments');
       }

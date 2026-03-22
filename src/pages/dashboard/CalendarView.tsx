@@ -17,7 +17,7 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { format } from 'date-fns';
 
 export default function CalendarView() {
-  const { role, user } = useAuth();
+  const { role, user, profissional: authProfissional } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [bloqueios, setBloqueios] = useState<Bloqueio[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -32,7 +32,7 @@ export default function CalendarView() {
   // Filters
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterService, setFilterService] = useState('all');
-  const [filterProfissional, setFilterProfissional] = useState(role === 'profissional' ? 'loading' : 'all');
+  const [filterProfissional, setFilterProfissional] = useState(role === 'profissional' ? (authProfissional?.id || 'loading') : 'all');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals state
@@ -40,10 +40,19 @@ export default function CalendarView() {
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
 
+  // Sync filterProfissional with authProfissional when it loads
+  useEffect(() => {
+    if (role === 'profissional' && authProfissional?.id && filterProfissional === 'loading') {
+      setFilterProfissional(authProfissional.id);
+      setCurrentProfissional(authProfissional);
+    }
+  }, [role, authProfissional, filterProfissional]);
+
   const loadData = async () => {
+    if (!user?.empresaId) return;
+    
     setIsLoading(true);
-    const firebaseUser = auth.currentUser;
-    if (firebaseUser && user?.empresaId) {
+    try {
       const start = new Date(selectedDate);
       start.setHours(0, 0, 0, 0);
       const end = new Date(selectedDate);
@@ -53,15 +62,12 @@ export default function CalendarView() {
       
       // If user is a professional, they can ONLY see their own data
       if (role === 'profissional') {
-        const profs = await getProfissionais(user.empresaId);
-        const firebaseUser = auth.currentUser;
-        const myProf = profs.find(p => p.userId === firebaseUser?.uid);
-        if (myProf) {
-          setCurrentProfissional(myProf);
-          profIdToFilter = myProf.id;
-          if (filterProfissional !== myProf.id) {
-            setFilterProfissional(myProf.id);
-          }
+        if (authProfissional) {
+          profIdToFilter = authProfissional.id;
+        } else {
+          // Wait for authProfissional to be ready
+          setIsLoading(false);
+          return;
         }
       }
 
@@ -82,13 +88,17 @@ export default function CalendarView() {
       setProfissionais(profData);
       setBusinessHours(bhData);
       setOverrides(ovData);
+    } catch (error) {
+      console.error("Error loading calendar data:", error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {
+    if (role === 'profissional' && filterProfissional === 'loading') return;
     loadData();
-  }, [selectedDate, filterProfissional]);
+  }, [selectedDate, filterProfissional, user?.empresaId]);
 
   const handleDeleteBloqueio = async (id: string) => {
     if (confirm('Deseja remover este bloqueio?')) {

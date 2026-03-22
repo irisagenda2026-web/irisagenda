@@ -12,6 +12,8 @@ import ClientesPage from './pages/dashboard/ClientesPage';
 import ProfissionaisPage from './pages/dashboard/ProfissionaisPage';
 import BusinessHoursPage from './pages/dashboard/BusinessHoursPage';
 import ProfilePage from './pages/dashboard/ProfilePage';
+import MarketingPage from './pages/dashboard/MarketingPage';
+import NPSPage from './pages/dashboard/NPSPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ClientDashboard from './pages/client/ClientDashboard';
 import PublicSite from './pages/public/PublicSite';
@@ -35,7 +37,9 @@ import {
   Scissors,
   UserPlus,
   Clock,
-  User
+  User,
+  Megaphone,
+  Star
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from './utils/cn';
@@ -74,7 +78,7 @@ function BottomNavLink({ to, icon: Icon, label, active }: any) {
 }
 
 function AppLayout() {
-  const { role, logout, user } = useAuth();
+  const { role, logout, user, empresa } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -82,6 +86,8 @@ function AppLayout() {
   const isEmpresa = role === 'empresa';
   const isProfissional = role === 'profissional';
   const isCliente = role === 'cliente';
+
+  const isProfissionalPlan = empresa?.plan === 'profissional' || empresa?.plan === 'enterprise';
 
   return (
     <>
@@ -114,6 +120,12 @@ function AppLayout() {
                 <NavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" active={location.pathname === '/dashboard/profissionais'} />
                 <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Horários" active={location.pathname === '/dashboard/disponibilidade'} />
                 <NavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
+                {isProfissionalPlan && (
+                  <>
+                    <NavLink to="/dashboard/marketing" icon={Megaphone} label="Marketing" active={location.pathname === '/dashboard/marketing'} />
+                    <NavLink to="/dashboard/nps" icon={Star} label="Satisfação" active={location.pathname === '/dashboard/nps'} />
+                  </>
+                )}
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" active={location.pathname === '/dashboard/finance'} />
                 <NavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
                 <NavLink to="/dashboard/profile" icon={User} label="Perfil" active={location.pathname === '/dashboard/profile'} />
@@ -186,6 +198,12 @@ function AppLayout() {
                 <NavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" />
                 <NavLink to="/dashboard/disponibilidade" icon={Clock} label="Horários" />
                 <NavLink to="/dashboard/clientes" icon={Users} label="Clientes" />
+                {isProfissionalPlan && (
+                  <>
+                    <NavLink to="/dashboard/marketing" icon={Megaphone} label="Marketing" />
+                    <NavLink to="/dashboard/nps" icon={Star} label="Satisfação" />
+                  </>
+                )}
                 <NavLink to="/dashboard/finance" icon={BarChart3} label="Financeiro" />
                 <NavLink to="/dashboard/site" icon={Settings} label="Site" />
               </>
@@ -225,7 +243,11 @@ function AppLayout() {
           {isEmpresa ? (
             <>
               <BottomNavLink to="/dashboard/profissionais" icon={UserPlus} label="Equipe" active={location.pathname === '/dashboard/profissionais'} />
-              <BottomNavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
+              {isProfissionalPlan ? (
+                <BottomNavLink to="/dashboard/marketing" icon={Megaphone} label="Marketing" active={location.pathname === '/dashboard/marketing'} />
+              ) : (
+                <BottomNavLink to="/dashboard/clientes" icon={Users} label="Clientes" active={location.pathname === '/dashboard/clientes'} />
+              )}
               <BottomNavLink to="/dashboard/site" icon={Settings} label="Site" active={location.pathname === '/dashboard/site'} />
             </>
           ) : (
@@ -266,6 +288,8 @@ export default function App() {
                 <Route path="/dashboard/clientes" element={<ProtectedRoute allowedRoles={['empresa']}><ClientesPage /></ProtectedRoute>} />
                 <Route path="/dashboard/profissionais" element={<ProtectedRoute allowedRoles={['empresa']}><ProfissionaisPage /></ProtectedRoute>} />
                 <Route path="/dashboard/disponibilidade" element={<ProtectedRoute allowedRoles={['empresa', 'profissional']}><BusinessHoursPage /></ProtectedRoute>} />
+                <Route path="/dashboard/marketing" element={<ProtectedRoute allowedRoles={['empresa']}><MarketingPage /></ProtectedRoute>} />
+                <Route path="/dashboard/nps" element={<ProtectedRoute allowedRoles={['empresa']}><NPSPage /></ProtectedRoute>} />
                 <Route path="/dashboard/profile" element={<ProtectedRoute allowedRoles={['empresa', 'profissional', 'cliente']}><ProfilePage /></ProtectedRoute>} />
                 <Route path="/dashboard/site" element={<ProtectedRoute allowedRoles={['empresa', 'admin']}><SiteEditor /></ProtectedRoute>} />
 

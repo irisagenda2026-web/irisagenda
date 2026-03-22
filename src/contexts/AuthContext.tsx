@@ -2,12 +2,13 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { auth, db } from '../services/firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
-import { User, UserRole, Profissional } from '../types/firebase';
+import { User, UserRole, Profissional, Empresa } from '../types/firebase';
 
 interface AuthContextType {
   user: User | null;
   role: UserRole;
   profissional: Profissional | null;
+  empresa: Empresa | null;
   isLoading: boolean;
   logout: () => Promise<void>;
 }
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRoleState] = useState<UserRole>('guest');
   const [profissional, setProfissional] = useState<Profissional | null>(null);
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [firestoreError, setFirestoreError] = useState<string | null>(null);
 
@@ -26,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       setFirestoreError(null);
       setProfissional(null);
+      setEmpresa(null);
       
       if (firebaseUser) {
         console.log("Auth state changed: User logged in", firebaseUser.uid);
@@ -45,6 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             setUser(finalUser);
             setRoleState(userData.role);
+
+            // Fetch Empresa data if applicable
+            if (finalUser.empresaId) {
+              const empresaDoc = await getDoc(doc(db, 'empresas', finalUser.empresaId));
+              if (empresaDoc.exists()) {
+                setEmpresa({ id: empresaDoc.id, ...empresaDoc.data() } as Empresa);
+              }
+            }
 
             // If professional, find the linked record
             if (userData.role === 'profissional' && userData.empresaId) {
@@ -137,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, profissional, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, role, profissional, empresa, isLoading, logout }}>
       {children}
     </AuthContext.Provider>
   );
