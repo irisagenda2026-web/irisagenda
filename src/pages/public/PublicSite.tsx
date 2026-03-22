@@ -49,7 +49,7 @@ export default function PublicSite() {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [selectedProfissional, setSelectedProfissional] = useState<Profissional | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAgendamentos, setExistingAgendamentos] = useState<Agendamento[]>([]);
@@ -180,8 +180,14 @@ export default function PublicSite() {
     }
   }, [selectedService]);
 
+  /**
+   * ATENÇÃO CRÍTICA: ESTA FUNÇÃO É O CORAÇÃO DO PROJETO.
+   * NUNCA remova ou altere a lógica de carregamento de slots sem garantir que
+   * a disponibilidade configurada no dashboard apareça corretamente no mini-site.
+   * A falha na exibição da disponibilidade é inaceitável.
+   */
   const generateTimeSlots = () => {
-    if (!selectedService || !selectedProfissional) return [];
+    if (!selectedService || !selectedProfissional || !businessHours) return [];
     
     return getAvailableTimeSlots(
       selectedDate,
