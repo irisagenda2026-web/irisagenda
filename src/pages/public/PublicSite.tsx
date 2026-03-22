@@ -17,10 +17,21 @@ import {
 import { format, addDays, startOfDay, isSameDay as isSameDayDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/src/utils/cn';
-import { getEmpresaBySlug, getServicos, createAgendamentoSecure, getAgendamentos, getBloqueios, getReviews, addReview, getProfissionais, getBusinessHours, getAvailabilityOverrides } from '@/src/services/db';
-import { Empresa, Servico, Agendamento, Bloqueio, Review, Profissional, AvailabilityOverride } from '@/src/types/firebase';
+import { getEmpresaBySlug, getServicos, createAgendamentoSecure, getAgendamentos, getBloqueios, getReviews, addReview, getProfissionais, getBusinessHours, getAvailabilityOverrides, getUpsells } from '@/src/services/db';
+import { Empresa, Servico, Agendamento, Bloqueio, Review, Profissional, AvailabilityOverride, Upsell, AgendamentoAddon } from '@/src/types/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import AuthModal from '@/src/components/AuthModal';
+import { 
+  Zap, 
+  Sparkles, 
+  ArrowRight, 
+  ShoppingBag, 
+  Gift, 
+  ArrowLeft,
+  Info,
+  X,
+  Plus
+} from 'lucide-react';
 
 import { generateTimeSlots as getAvailableTimeSlots } from '@/src/utils/availability';
 
@@ -48,6 +59,11 @@ export default function PublicSite() {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState<string>('');
+  
+  // Upsell State
+  const [upsells, setUpsells] = useState<Upsell[]>([]);
+  const [activeUpsell, setActiveUpsell] = useState<Upsell | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<AgendamentoAddon[]>([]);
 
   const DEFAULT_BUSINESS_HOURS = {
     '0': { isOpen: false, slots: [] },
@@ -65,14 +81,16 @@ export default function PublicSite() {
         const emp = await getEmpresaBySlug(slug);
         if (emp) {
           setEmpresa(emp);
-          const [svs, revs, profs] = await Promise.all([
+          const [svs, revs, profs, ups] = await Promise.all([
             getServicos(emp.id),
             getReviews(emp.id),
-            getProfissionais(emp.id)
+            getProfissionais(emp.id),
+            getUpsells(emp.id)
           ]);
           setServicos(svs.filter(s => s.isActive));
           setReviews(revs);
           setProfissionais(profs.filter(p => p.isActive));
+          setUpsells(ups.filter(u => u.isActive));
           
           // Auto-select professional if only one
           const activeProfs = profs.filter(p => p.isActive);
@@ -177,15 +195,25 @@ export default function PublicSite() {
     ).filter(slot => slot.available).map(slot => slot.time);
   };
 
-  const handleSchedule = async (timeOverride?: string, authenticatedUser?: any) => {
+  const handleSchedule = async (timeOverride?: string, authenticatedUser?: any, forceAddons?: AgendamentoAddon[]) => {
     const timeToUse = timeOverride || selectedTime;
     const currentUser = authenticatedUser || user;
+    const addonsToUse = forceAddons || selectedAddons;
 
     if (!empresa || !selectedService || !timeToUse) return;
     
     if (!authenticatedUser && !user) {
       setIsAuthModalOpen(true);
       return;
+    }
+
+    // Check for Upsell if not already processed
+    if (!forceAddons && selectedAddons.length === 0) {
+      const applicableUpsell = upsells.find(u => u.triggerServiceIds.includes(selectedService.id));
+      if (applicableUpsell) {
+        setActiveUpsell(applicableUpsell);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -229,8 +257,12 @@ export default function PublicSite() {
       const commType = profComm?.type || selectedService.commissionType || 'percentage';
       const commValue = profComm?.value ?? selectedService.commissionValue ?? 0;
 
+      const basePrice = selectedService.price;
+      const addonsPrice = addonsToUse.reduce((acc, addon) => acc + addon.price, 0);
+      const totalPrice = basePrice + addonsPrice;
+
       const commissionAmount = commType === 'percentage' 
-        ? (selectedService.price * commValue) / 100 
+        ? (totalPrice * commValue) / 100 
         : commValue;
 
       await createAgendamentoSecure({
@@ -245,17 +277,23 @@ export default function PublicSite() {
         startTime: startTime.getTime(),
         endTime: endTime.getTime(),
         status: 'pending',
-        totalPrice: selectedService.price,
+        totalPrice,
         commissionType: commType,
         commissionValue: commValue,
-        commissionAmount
+        commissionAmount,
+        addons: addonsToUse
       });
 
+      const addonsText = addonsToUse.length > 0 
+        ? `\n*Add-ons:* ${addonsToUse.map(a => a.name).join(', ')}` 
+        : '';
+
       const message = `Olá! Acabei de realizar um agendamento:\n\n` +
-        `*Serviço:* ${selectedService.name}\n` +
+        `*Serviço:* ${selectedService.name}${addonsText}\n` +
         `*Profissional:* ${selectedProfissional?.name || 'Profissional'}\n` +
         `*Data:* ${format(startTime, "dd/MM/yyyy", { locale: ptBR })}\n` +
-        `*Horário:* ${timeToUse}\n\n` +
+        `*Horário:* ${timeToUse}\n` +
+        `*Valor Total:* R$ ${totalPrice.toLocaleString('pt-BR')}\n\n` +
         `Aguardo confirmação!`;
       
       const phone = empresa.whatsapp || empresa.phone || '';
@@ -314,6 +352,120 @@ export default function PublicSite() {
         onSuccess={(userData) => handleSchedule(undefined, userData)}
         isBookingFlow={true}
       />
+
+      {/* Upsell Modal */}
+      <AnimatePresence>
+        {activeUpsell && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setActiveUpsell(null)}
+              className="absolute inset-0 bg-zinc-900/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-6">
+                <button 
+                  onClick={() => setActiveUpsell(null)}
+                  className="p-2 hover:bg-zinc-100 rounded-full transition-all text-zinc-400"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-8 pt-12 text-center">
+                <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Sparkles size={40} className="animate-pulse" />
+                </div>
+                
+                <h3 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">
+                  {activeUpsell.title}
+                </h3>
+                <p className="text-zinc-500 mb-8 leading-relaxed">
+                  {activeUpsell.description}
+                </p>
+
+                {/* Addon Preview */}
+                {(() => {
+                  const addonService = servicos.find(s => s.id === activeUpsell.addonServiceId);
+                  if (!addonService) return null;
+                  
+                  return (
+                    <div className="bg-zinc-50 rounded-3xl p-6 mb-8 border border-zinc-100 text-left relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-black px-4 py-1 rounded-bl-2xl uppercase tracking-widest">
+                        Oferta Especial
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-sm">
+                          {addonService.imageUrl ? (
+                            <img src={addonService.imageUrl} alt={addonService.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                              <ShoppingBag size={24} />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-zinc-900">{addonService.name}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-zinc-400 line-through text-sm">R$ {addonService.price}</span>
+                            <span className="text-emerald-600 font-black text-xl">
+                              R$ {activeUpsell.discountPrice || addonService.price}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => {
+                      const addonService = servicos.find(s => s.id === activeUpsell.addonServiceId);
+                      if (addonService) {
+                        const addon: AgendamentoAddon = {
+                          serviceId: addonService.id,
+                          name: addonService.name,
+                          price: activeUpsell.discountPrice || addonService.price
+                        };
+                        setSelectedAddons([addon]);
+                        handleSchedule(undefined, undefined, [addon]);
+                        setActiveUpsell(null);
+                      }
+                    }}
+                    className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-2"
+                  >
+                    <Plus size={20} />
+                    Sim, eu quero!
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleSchedule(undefined, undefined, []);
+                      setActiveUpsell(null);
+                    }}
+                    className="w-full bg-zinc-100 text-zinc-500 py-4 rounded-2xl font-bold hover:bg-zinc-200 transition-all"
+                  >
+                    Não, obrigado
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-zinc-50 p-4 text-center border-t border-zinc-100">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center justify-center gap-2">
+                  <Gift size={12} /> Oferta exclusiva para este agendamento
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Header / Cover */}
       <div className="relative h-[40vh] md:h-[50vh] bg-zinc-900 overflow-hidden">

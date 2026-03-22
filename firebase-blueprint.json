@@ -98,6 +98,23 @@
         "createdAt": { "type": "number" }
       },
       "required": ["id", "empresaId", "code", "discount", "type", "expiryDate", "usageCount", "isActive", "createdAt"]
+    },
+    "Upsell": {
+      "title": "Upsell",
+      "description": "Marketing upsell offer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empresaId": { "type": "string" },
+        "triggerServiceIds": { "type": "array", "items": { "type": "string" } },
+        "addonServiceId": { "type": "string" },
+        "discountPrice": { "type": "number" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "empresaId", "triggerServiceIds", "addonServiceId", "title", "isActive", "createdAt"]
     }
   },
   "firestore": {
@@ -106,6 +123,7 @@
     "/servicos/{servicoId}": { "schema": "Servico", "description": "Services" },
     "/agendamentos/{agendamentoId}": { "schema": "Agendamento", "description": "Bookings" },
     "/reviews/{reviewId}": { "schema": "Review", "description": "Customer reviews" },
-    "/coupons/{couponId}": { "schema": "Coupon", "description": "Discount coupons" }
+    "/coupons/{couponId}": { "schema": "Coupon", "description": "Discount coupons" },
+    "/upsells/{upsellId}": { "schema": "Upsell", "description": "Upsell offers" }
   }
 }

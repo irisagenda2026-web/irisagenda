@@ -56,6 +56,12 @@ export interface Servico {
   professionalCommissions?: Record<string, { type: 'percentage' | 'fixed', value: number }>;
 }
 
+export interface AgendamentoAddon {
+  serviceId: string;
+  name: string;
+  price: number;
+}
+
 export interface Agendamento {
   id: string;
   empresaId: string;
@@ -70,10 +76,24 @@ export interface Agendamento {
   endTime: number; // timestamp
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   totalPrice: number;
+  addons?: AgendamentoAddon[];
   commissionType?: 'percentage' | 'fixed';
   commissionValue?: number;
   commissionAmount?: number; // Calculated amount for this specific booking
   notes?: string;
+  createdAt: number;
+}
+
+export interface Upsell {
+  id: string;
+  empresaId: string;
+  triggerServiceIds: string[]; // Services that trigger this upsell
+  addonServiceId: string; // The service being offered as an add-on
+  discountPrice?: number; // Optional special price when bought as an add-on
+  title: string; // Catchy title like "Complete sua experiência"
+  description: string; // Why they should add this
+  imageUrl?: string;
+  isActive: boolean;
   createdAt: number;
 }
 

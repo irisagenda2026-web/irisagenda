@@ -567,6 +567,15 @@ export default function CalendarView() {
                               <p className="text-xs text-zinc-500">
                                 <span className="font-medium">Profissional:</span> {ag.profissionalName || 'Profissional'}
                               </p>
+                              {ag.addons && ag.addons.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {ag.addons.map((addon, idx) => (
+                                    <span key={idx} className="text-[9px] bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded-md font-bold">
+                                      + {addon.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             {/* Cliente */}

@@ -25,7 +25,8 @@ import {
   PlatformSettings, 
   Profissional, 
   AvailabilityOverride,
-  Coupon
+  Coupon,
+  Upsell
 } from '../types/firebase';
 
 // Platform Settings
@@ -280,6 +281,32 @@ export const getMarketingStats = async (empresaId: string) => {
     usage: totalUsage,
     revenue: totalUsage * 45 // Estimated revenue
   };
+};
+
+// Upsells
+export const getUpsells = async (empresaId: string) => {
+  const q = query(
+    collection(db, 'upsells'),
+    where('empresaId', '==', empresaId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Upsell));
+};
+
+export const createUpsell = async (data: Omit<Upsell, 'id' | 'createdAt'>) => {
+  return await addDoc(collection(db, 'upsells'), {
+    ...data,
+    createdAt: Date.now(),
+  });
+};
+
+export const updateUpsell = async (id: string, data: Partial<Upsell>) => {
+  const docRef = doc(db, 'upsells', id);
+  await updateDoc(docRef, data);
+};
+
+export const deleteUpsell = async (id: string) => {
+  await deleteDoc(doc(db, 'upsells', id));
 };
 
 // Bloqueios
