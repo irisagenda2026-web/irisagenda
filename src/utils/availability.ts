@@ -6,9 +6,26 @@ export interface TimeSlot {
   available: boolean;
 }
 
+export interface BusinessHours {
+  [key: string]: {
+    isOpen: boolean;
+    slots: { start: string; end: string; serviceIds?: string[] }[];
+  };
+}
+
+export const DEFAULT_BUSINESS_HOURS: BusinessHours = {
+  '0': { isOpen: false, slots: [] },
+  '1': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+  '2': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+  '3': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+  '4': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+  '5': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
+  '6': { isOpen: false, slots: [] },
+};
+
 export function generateTimeSlots(
   date: Date,
-  businessHours: any,
+  businessHours: BusinessHours | null,
   overrides: AvailabilityOverride[],
   agendamentos: Agendamento[],
   bloqueios: Bloqueio[],
@@ -17,6 +34,8 @@ export function generateTimeSlots(
   intervalMinutes: number = 30
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
+  
+  const effectiveBusinessHours = businessHours || DEFAULT_BUSINESS_HOURS;
   
   // Use date-fns for consistent date string generation (local time)
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -34,15 +53,15 @@ export function generateTimeSlots(
       workingSlots = override.slots;
     } else if (isWorkingDay) {
       // If marked open but no slots, fallback to standard hours for that day
-      const standardDay = businessHours?.[dayOfWeek];
+      const standardDay = effectiveBusinessHours?.[dayOfWeek];
       if (standardDay && standardDay.isOpen && standardDay.slots) {
         workingSlots = standardDay.slots;
       }
     }
-  } else if (businessHours && businessHours[dayOfWeek]) {
-    isWorkingDay = businessHours[dayOfWeek].isOpen;
-    if (isWorkingDay && businessHours[dayOfWeek].slots) {
-      workingSlots = businessHours[dayOfWeek].slots;
+  } else if (effectiveBusinessHours && effectiveBusinessHours[dayOfWeek]) {
+    isWorkingDay = effectiveBusinessHours[dayOfWeek].isOpen;
+    if (isWorkingDay && effectiveBusinessHours[dayOfWeek].slots) {
+      workingSlots = effectiveBusinessHours[dayOfWeek].slots;
     }
   }
 

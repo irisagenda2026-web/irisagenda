@@ -121,17 +121,13 @@ export const deleteServico = async (id: string) => {
 
 // Agendamentos
 export const getAgendamentos = async (empresaId: string, dateStart: number, dateEnd: number) => {
-  // Use a single range filter on startTime and filter endTime on client-side
-  // to avoid complex composite index requirements for multiple range fields.
   const q = query(
     collection(db, 'agendamentos'), 
-    where('empresaId', '==', empresaId),
-    where('startTime', '<', dateEnd)
+    where('empresaId', '==', empresaId)
   );
   const querySnapshot = await getDocs(q);
   const agendamentos = querySnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as Agendamento));
   
-  // Filter by endTime and a reasonable lower bound for startTime to catch overlapping appointments
   return agendamentos.filter(ag => ag.endTime > dateStart && ag.startTime < dateEnd);
 };
 
@@ -141,13 +137,10 @@ export const createAgendamentoSecure = async (data: Omit<Agendamento, 'id' | 'cr
   
   return await runTransaction(db, async (transaction) => {
     // 1. Verificar sobreposições no servidor (dentro da transação)
-    // Simplified query to avoid multiple range filters index error
     const q = query(
       agendamentosRef,
       where('empresaId', '==', data.empresaId),
-      where('profissionalId', '==', data.profissionalId),
-      where('status', 'in', ['pending', 'confirmed', 'completed']),
-      where('startTime', '<', data.endTime)
+      where('profissionalId', '==', data.profissionalId)
     );
     
     const snapshot = await getDocs(q);
@@ -155,6 +148,7 @@ export const createAgendamentoSecure = async (data: Omit<Agendamento, 'id' | 'cr
     
     // Client-side overlap check within the transaction
     const hasOverlap = existingAgs.some(ag => 
+      ag.status !== 'cancelled' &&
       data.startTime < ag.endTime && data.endTime > ag.startTime
     );
 
@@ -166,8 +160,7 @@ export const createAgendamentoSecure = async (data: Omit<Agendamento, 'id' | 'cr
     const bq = query(
       collection(db, 'bloqueios'),
       where('empresaId', '==', data.empresaId),
-      where('profissionalId', '==', data.profissionalId),
-      where('startTime', '<', data.endTime)
+      where('profissionalId', '==', data.profissionalId)
     );
     const bSnapshot = await getDocs(bq);
     const existingBloqueios = bSnapshot.docs.map(doc => doc.data() as Bloqueio);
@@ -362,26 +355,19 @@ export const deleteUpsell = async (id: string) => {
 
 // Bloqueios
 export const getBloqueios = async (empresaId: string, profissionalId: string | null, dateStart: number, dateEnd: number) => {
-  let q;
-  if (profissionalId) {
-    q = query(
-      collection(db, 'bloqueios'), 
-      where('empresaId', '==', empresaId),
-      where('profissionalId', '==', profissionalId),
-      where('startTime', '<', dateEnd)
-    );
-  } else {
-    q = query(
-      collection(db, 'bloqueios'), 
-      where('empresaId', '==', empresaId),
-      where('startTime', '<', dateEnd)
-    );
-  }
+  const q = query(
+    collection(db, 'bloqueios'), 
+    where('empresaId', '==', empresaId)
+  );
   const querySnapshot = await getDocs(q);
   const bloqueios = querySnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as Bloqueio));
   
-  // Filter by endTime on client-side
-  return bloqueios.filter(bl => bl.endTime > dateStart && bl.startTime < dateEnd);
+  // Filter by profissionalId and time range on client-side
+  return bloqueios.filter(bl => {
+    const matchesProf = !profissionalId || bl.profissionalId === profissionalId;
+    const overlaps = bl.endTime > dateStart && bl.startTime < dateEnd;
+    return matchesProf && overlaps;
+  });
 };
 
 export const createBloqueio = async (data: Omit<Bloqueio, 'id' | 'createdAt'>) => {
@@ -436,17 +422,15 @@ export const getBusinessHours = async (empresaId: string, profissionalId: string
 
 // Availability Overrides
 export const getAvailabilityOverrides = async (empresaId: string, profissionalId: string, month: string) => {
-  // OPTIMIZATION: Fetch by empresaId and profissionalId, then filter by month on client-side
   const q = query(
     collection(db, 'availabilityOverrides'),
-    where('empresaId', '==', empresaId),
-    where('profissionalId', '==', profissionalId)
+    where('empresaId', '==', empresaId)
   );
   const querySnapshot = await getDocs(q);
   const allOverrides = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AvailabilityOverride));
   
-  // Filter by month (YYYY-MM)
-  return allOverrides.filter(o => o.date.startsWith(month));
+  // Filter by profissionalId and month (YYYY-MM) on client-side
+  return allOverrides.filter(o => o.profissionalId === profissionalId && o.date.startsWith(month));
 };
 
 export const saveAvailabilityOverride = async (data: Omit<AvailabilityOverride, 'id' | 'updatedAt'>) => {

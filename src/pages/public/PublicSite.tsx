@@ -33,7 +33,7 @@ import {
   Plus
 } from 'lucide-react';
 
-import { generateTimeSlots as getAvailableTimeSlots } from '@/src/utils/availability';
+import { generateTimeSlots as getAvailableTimeSlots, DEFAULT_BUSINESS_HOURS } from '@/src/utils/availability';
 
 export default function PublicSite() {
   const { slug } = useParams<{ slug: string }>();
@@ -64,16 +64,6 @@ export default function PublicSite() {
   const [upsells, setUpsells] = useState<Upsell[]>([]);
   const [activeUpsell, setActiveUpsell] = useState<Upsell | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<AgendamentoAddon[]>([]);
-
-  const DEFAULT_BUSINESS_HOURS = {
-    '0': { isOpen: false, slots: [] },
-    '1': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
-    '2': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
-    '3': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
-    '4': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
-    '5': { isOpen: true, slots: [{ start: '08:00', end: '18:00' }] },
-    '6': { isOpen: false, slots: [] },
-  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -115,6 +105,7 @@ export default function PublicSite() {
     const loadSlots = async () => {
       if (empresa && selectedDate && selectedProfissional) {
         setIsLoadingSlots(true);
+
         const start = startOfDay(selectedDate);
         const end = new Date(start);
         end.setHours(23, 59, 59, 999);
@@ -128,13 +119,13 @@ export default function PublicSite() {
             getBusinessHours(empresa.id, selectedProfissional.id),
             getAvailabilityOverrides(empresa.id, selectedProfissional.id, month)
           ]);
-          
+
           // Filter agendamentos for this professional
           setExistingAgendamentos(ags.filter(a => a.profissionalId === selectedProfissional.id));
           setExistingBloqueios(bls);
           
           // Use configured hours or default to closed
-          setBusinessHours(hours || DEFAULT_BUSINESS_HOURS);
+          setBusinessHours(hours);
           setAvailabilityOverrides(overrides);
         } catch (error) {
           console.error("Error loading slots:", error);
@@ -187,9 +178,11 @@ export default function PublicSite() {
    * A falha na exibição da disponibilidade é inaceitável.
    */
   const generateTimeSlots = () => {
-    if (!selectedService || !selectedProfissional || !businessHours) return [];
+    if (!selectedService || !selectedProfissional) {
+      return [];
+    }
     
-    return getAvailableTimeSlots(
+    const slots = getAvailableTimeSlots(
       selectedDate,
       businessHours,
       availabilityOverrides,
@@ -198,7 +191,11 @@ export default function PublicSite() {
       selectedService.durationMinutes,
       selectedService.id,
       15 // 15 min intervals
-    ).filter(slot => slot.available).map(slot => slot.time);
+    );
+
+    const availableSlots = slots.filter(slot => slot.available).map(slot => slot.time);
+
+    return availableSlots;
   };
 
   const handleSchedule = async (timeOverride?: string, authenticatedUser?: any, forceAddons?: AgendamentoAddon[]) => {
