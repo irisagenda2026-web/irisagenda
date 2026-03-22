@@ -101,10 +101,10 @@ function AppLayout() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-6 ml-auto mr-8">
             {role === 'guest' && (
               <>
-                <NavLink to="/" icon={Home} label="Início" active={location.pathname === '/'} />
+                <a href="/#features" className="text-sm font-medium text-zinc-600 hover:text-emerald-600 transition-colors">Funcionalidades</a>
                 <NavLink to="/plans" icon={CreditCard} label="Planos" active={location.pathname === '/plans'} />
               </>
             )}
@@ -194,6 +194,28 @@ function AppLayout() {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-zinc-200 p-4 space-y-2">
+            {role === 'guest' && (
+              <>
+                <NavLink to="/" icon={Home} label="Início" active={location.pathname === '/'} />
+                <NavLink to="/plans" icon={CreditCard} label="Planos" active={location.pathname === '/plans'} />
+                <div className="pt-4 border-t border-zinc-100 flex flex-col gap-2">
+                  <Link 
+                    to="/login" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full py-3 text-center font-bold text-zinc-600 hover:bg-zinc-50 rounded-xl transition-all"
+                  >
+                    Entrar
+                  </Link>
+                  <Link 
+                    to="/plans" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full py-3 text-center font-bold bg-zinc-900 text-white rounded-xl transition-all"
+                  >
+                    Criar Conta
+                  </Link>
+                </div>
+              </>
+            )}
             {/* Same links as desktop but stacked */}
             {isEmpresa && (
               <>

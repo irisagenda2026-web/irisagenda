@@ -113,7 +113,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-24 bg-zinc-50">
+      <section id="features" className="py-24 bg-zinc-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 mb-4">
@@ -247,6 +247,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
             <Logo className="h-12" />
+          </div>
+          <div className="flex justify-center gap-8 mb-8">
+            <Link to="/plans" className="text-sm font-medium text-zinc-500 hover:text-emerald-600">Planos</Link>
+            <Link to="/login" className="text-sm font-medium text-zinc-500 hover:text-emerald-600">Entrar</Link>
+            <Link to="/signup" className="text-sm font-medium text-zinc-500 hover:text-emerald-600">Criar Conta</Link>
           </div>
           <p className="text-zinc-500 text-sm">
             © 2026 Iris Agenda Tecnologia LTDA. Todos os direitos reservados.
