@@ -301,7 +301,7 @@ async function startServer() {
   });
 
   // Webhook for Asaas Notifications
-  app.post('/api/asaas/webhook', async (req, res) => {
+  app.post(['/api/asaas/webhook', '/api/asaas/webhook/'], async (req, res) => {
     const { event, payment } = req.body;
     const webhookToken = req.headers['asaas-access-token'];
 
