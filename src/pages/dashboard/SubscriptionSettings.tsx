@@ -6,14 +6,16 @@ import { Plan } from '@/src/types/firebase';
 import { Check, Zap, CreditCard, Calendar, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import PlanSelectionModal from '@/src/components/dashboard/PlanSelectionModal';
+import PaymentModal from '@/src/components/dashboard/PaymentModal';
 import { toast } from 'react-hot-toast';
 
 export default function SubscriptionSettings() {
-  const { empresa, refresh } = useAuth();
+  const { user, empresa, refresh } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -35,6 +37,7 @@ export default function SubscriptionSettings() {
   const currentPlan = plans.find(p => p.id === empresa?.planId);
   const subscription = empresa?.subscription;
   const isTrialing = subscription?.status === 'trialing';
+  const isPastDue = subscription?.status === 'past_due';
   
   const trialEndsAt = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt) : null;
   const daysLeft = trialEndsAt ? Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
@@ -90,6 +93,26 @@ export default function SubscriptionSettings() {
                   <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Termina em</p>
                   <p className="font-bold">{trialEndsAt?.toLocaleDateString('pt-BR')}</p>
                 </div>
+              </div>
+            )}
+
+            {isPastDue && (
+              <div className="bg-red-50 border border-red-100 rounded-3xl p-6 text-red-900 flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-red-100 rounded-2xl text-red-600">
+                    <AlertCircle size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-black">Pagamento Pendente</h4>
+                    <p className="text-sm text-red-700 font-medium">Sua assinatura está pendente de pagamento.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors"
+                >
+                  Pagar Agora
+                </button>
               </div>
             )}
 
@@ -174,6 +197,33 @@ export default function SubscriptionSettings() {
         currentPlanId={empresa?.planId}
         onSelectPlan={handleSelectPlan}
       />
+
+      {currentPlan && empresa && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          value={currentPlan.price}
+          description={`Assinatura ${currentPlan.name}`}
+          externalReference={`plan_${currentPlan.id}_${empresa.id}`}
+          customerData={{
+            name: empresa.name,
+            email: user?.email || '',
+            cpfCnpj: empresa.cpfCnpj || ''
+          }}
+          onSuccess={async () => {
+            setIsPaymentModalOpen(false);
+            toast.success('Pagamento processado com sucesso!');
+            
+            // Optimistic update
+            await updateEmpresaSubscription(empresa.id, {
+              status: 'active',
+              currentPeriodEnd: Date.now() + (30 * 24 * 60 * 60 * 1000)
+            });
+            
+            refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -116,9 +116,11 @@ export default function PlansPage() {
                     <span className="text-6xl font-black tracking-tighter">{plan.price}</span>
                     <span className="text-sm font-bold opacity-60">/mês</span>
                   </div>
-                  <p className="text-xs font-bold text-emerald-500 mt-2">
-                    + {plan.trialDays} dias de teste grátis
-                  </p>
+                  {plan.trialDays > 0 && (
+                    <p className="text-xs font-bold text-emerald-500 mt-2">
+                      + {plan.trialDays} dias de teste grátis
+                    </p>
+                  )}
                 </div>
 
                 <div className={cn(

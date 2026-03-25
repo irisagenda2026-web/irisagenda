@@ -45,6 +45,9 @@ export default function SignupPage() {
     fetchPlans();
   }, [planId]);
 
+  const trialDays = selectedPlan?.trialDays ?? 15;
+  const hasTrial = trialDays > 0;
+
   const handleNext = () => {
     if (step === 'account') {
       if (!formData.name || !formData.email || !formData.password) {
@@ -57,13 +60,18 @@ export default function SignupPage() {
         setError('Preencha os dados da sua clínica.');
         return;
       }
-      setStep('payment');
+      if (!hasTrial) {
+        // Se não tem trial, finaliza o cadastro aqui mesmo
+        handleSubmit();
+      } else {
+        setStep('payment');
+      }
     }
     setError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
     setError('');
     
@@ -81,7 +89,6 @@ export default function SignupPage() {
       });
 
       // 3. Create Empresa document in Firestore
-      const trialDays = selectedPlan?.permissions.trialDays || 15;
       const trialEndsAt = Date.now() + (trialDays * 24 * 60 * 60 * 1000);
 
       await createEmpresa(firebaseUser.uid, {
@@ -95,15 +102,15 @@ export default function SignupPage() {
         ownerId: firebaseUser.uid,
         planId: selectedPlan?.id || 'essencial',
         subscription: {
-          status: 'trialing',
+          status: hasTrial ? 'trialing' : 'past_due',
           trialEndsAt,
           currentPeriodEnd: trialEndsAt,
           cancelAtPeriodEnd: false,
-          paymentMethod: {
+          paymentMethod: hasTrial ? {
             brand: 'visa', // Simulated
-            last4: formData.cardNumber.slice(-4),
+            last4: formData.cardNumber.slice(-4) || '0000',
             cardToken: 'tok_simulated_' + Math.random().toString(36).substring(7),
-          }
+          } : undefined
         },
         settings: {
           primaryColor: '#059669',
@@ -133,7 +140,7 @@ export default function SignupPage() {
   const steps = [
     { id: 'account', label: 'Conta', icon: UserIcon },
     { id: 'business', label: 'Negócio', icon: Building2 },
-    { id: 'payment', label: 'Pagamento', icon: CreditCard },
+    ...(hasTrial ? [{ id: 'payment', label: 'Pagamento', icon: CreditCard }] : []),
   ];
 
   return (
@@ -214,10 +221,17 @@ export default function SignupPage() {
 
                 <button 
                   onClick={handleNext}
-                  className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
+                  disabled={isLoading}
+                  className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Próximo Passo
-                  <ArrowRight size={18} />
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : (
+                    <>
+                      {hasTrial ? 'Próximo Passo' : 'Finalizar Cadastro'}
+                      <ArrowRight size={18} />
+                    </>
+                  )}
                 </button>
               </motion.div>
             )}

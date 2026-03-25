@@ -698,6 +698,7 @@ function PlanModal({ plan, onClose, onSave }: { plan: Plan | null, onClose: () =
                 <label className="block text-xs font-bold text-zinc-500 uppercase mb-1.5">Dias de Trial</label>
                 <input 
                   type="number" 
+                  min="0"
                   required
                   value={formData.trialDays}
                   onChange={e => setFormData({ ...formData, trialDays: Number(e.target.value) })}

@@ -169,7 +169,7 @@ export default async function handler(req: any, res: any) {
         
         if (externalReference) {
           if (externalReference.startsWith('plan_')) {
-            const [_, empresaId, planId] = externalReference.split('_');
+            const [_, planId, empresaId] = externalReference.split('_');
             await db.collection('empresas').doc(empresaId).update({
               planId,
               'subscription.status': 'active',
