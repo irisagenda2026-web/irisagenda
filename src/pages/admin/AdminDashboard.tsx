@@ -17,7 +17,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { createEmpresa, addServico, createAgendamento, getAllEmpresas, getAllUsers, getPlans, createPlan } from '../../services/db';
-import { auth } from '../../services/firebase';
+import { auth, db } from '../../services/firebase';
+import { updateDoc, doc } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { Empresa, User, Plan } from '../../types/firebase';
 import Logo from '../../components/Logo';
 import AdminSettings from './AdminSettings';
@@ -61,7 +63,12 @@ export default function AdminDashboard() {
               hasReviews: true,
               hasCustomBranding: false, 
               hasNPS: false,
-              hasMarketing: false
+              hasMarketing: false,
+              availablePaymentMethods: {
+                pix: true,
+                creditCard: true,
+                onSite: true
+              }
             },
             isActive: true,
             trialDays: 15
@@ -80,7 +87,12 @@ export default function AdminDashboard() {
               hasReviews: true,
               hasCustomBranding: true, 
               hasNPS: true,
-              hasMarketing: true
+              hasMarketing: true,
+              availablePaymentMethods: {
+                pix: true,
+                creditCard: true,
+                onSite: true
+              }
             },
             isActive: true,
             trialDays: 15
@@ -217,6 +229,53 @@ export default function AdminDashboard() {
                         <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">ATIVO</span>
                       </div>
                       <div className="text-2xl font-black text-zinc-900 mb-4">R$ {plan.price}/mês</div>
+                      
+                      <div className="mb-6">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Métodos Disponíveis</p>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { id: 'pix', label: 'PIX' },
+                            { id: 'creditCard', label: 'Cartão' },
+                            { id: 'onSite', label: 'No Local' }
+                          ].map(m => {
+                            const isAvailable = (plan.permissions.availablePaymentMethods as any)?.[m.id];
+                            return (
+                              <button 
+                                key={m.id} 
+                                onClick={async () => {
+                                  try {
+                                    const newMethods = {
+                                      ...(plan.permissions.availablePaymentMethods || {}),
+                                      [m.id]: !isAvailable
+                                    };
+                                    await updateDoc(doc(db, 'plans', plan.id), {
+                                      'permissions.availablePaymentMethods': newMethods
+                                    });
+                                    setPlans(prev => prev.map(p => p.id === plan.id ? {
+                                      ...p,
+                                      permissions: { ...p.permissions, availablePaymentMethods: newMethods }
+                                    } : p));
+                                    toast.success(`Método ${m.label} atualizado no plano ${plan.name}`);
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast.error('Erro ao atualizar plano');
+                                  }
+                                }}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-xl text-[10px] font-bold flex items-center gap-1.5 border transition-all",
+                                  isAvailable 
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+                                    : "bg-zinc-100 text-zinc-400 border-zinc-200 opacity-50"
+                                )}
+                              >
+                                {isAvailable ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
+                                {m.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       <ul className="space-y-2 mb-6">
                         {plan.features.slice(0, 3).map((f, i) => (
                           <li key={i} className="text-xs text-zinc-500 flex items-center gap-2">

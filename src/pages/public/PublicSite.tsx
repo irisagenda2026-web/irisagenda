@@ -934,6 +934,43 @@ export default function PublicSite() {
           }}
           split={pendingBookingData.split}
           onSuccess={handlePaymentSuccess}
+          acceptedPaymentMethods={empresa.settings?.acceptedPaymentMethods}
+          onPayOnSite={async () => {
+            if (!pendingBookingData) return;
+            setIsSubmitting(true);
+            try {
+              await createAgendamentoSecure({
+                ...pendingBookingData,
+                paymentStatus: 'pending',
+                paymentMethod: 'on_site'
+              });
+              
+              const startTime = new Date(pendingBookingData.startTime);
+              const timeToUse = format(startTime, "HH:mm");
+              const message = `Olá! Acabei de realizar um agendamento (PAGAMENTO NO LOCAL):\n\n` +
+                `*Serviço:* ${pendingBookingData.servicoName}\n` +
+                `*Profissional:* ${pendingBookingData.profissionalName}\n` +
+                `*Data:* ${format(startTime, "dd/MM/yyyy", { locale: ptBR })}\n` +
+                `*Horário:* ${timeToUse}\n` +
+                `*Valor Total:* R$ ${pendingBookingData.totalPrice.toLocaleString('pt-BR')}\n\n` +
+                `Aguardo confirmação!`;
+              
+              const phone = empresa.whatsapp || empresa.phone || '';
+              const cleanPhone = phone.replace(/\D/g, '');
+              if (cleanPhone) {
+                const waUrl = `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}`;
+                setWhatsappUrl(waUrl);
+              }
+
+              setStep('success');
+              setIsPaymentModalOpen(false);
+            } catch (error: any) {
+              console.error(error);
+              alert('Erro ao confirmar agendamento.');
+            } finally {
+              setIsSubmitting(false);
+            }
+          }}
         />
       )}
     </div>

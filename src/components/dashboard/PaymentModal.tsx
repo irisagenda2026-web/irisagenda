@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, QrCode, Shield, Check, Loader2, Copy, ArrowRight, AlertCircle } from 'lucide-react';
+import { X, CreditCard, QrCode, Shield, Check, Loader2, Copy, ArrowRight, AlertCircle, MapPin } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { toast } from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
@@ -23,6 +23,12 @@ interface PaymentModalProps {
     percentualValue?: number;
   }[];
   onSuccess: () => void;
+  acceptedPaymentMethods?: {
+    pix: boolean;
+    creditCard: boolean;
+    onSite: boolean;
+  };
+  onPayOnSite?: () => void;
 }
 
 export default function PaymentModal({
@@ -33,9 +39,13 @@ export default function PaymentModal({
   externalReference,
   customerData,
   split,
-  onSuccess
+  onSuccess,
+  acceptedPaymentMethods = { pix: true, creditCard: true, onSite: true },
+  onPayOnSite
 }: PaymentModalProps) {
-  const [method, setMethod] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
+  const [method, setMethod] = useState<'PIX' | 'CREDIT_CARD' | 'ON_SITE'>(
+    acceptedPaymentMethods.pix ? 'PIX' : (acceptedPaymentMethods.creditCard ? 'CREDIT_CARD' : 'ON_SITE')
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [pixData, setPixData] = useState<{ payload: string; encodedImage: string } | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
@@ -178,6 +188,15 @@ export default function PaymentModal({
     }
   };
 
+  const handlePayOnSite = () => {
+    if (onPayOnSite) {
+      onPayOnSite();
+    } else {
+      onSuccess();
+    }
+    onClose();
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Código copiado!');
@@ -230,28 +249,70 @@ export default function PaymentModal({
                 <>
                   {/* Method Selection */}
                   {!pixData && (
-                    <div className="grid grid-cols-2 gap-4 mb-8">
-                      <button
-                        onClick={() => setMethod('PIX')}
-                        className={cn(
-                          "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2",
-                          method === 'PIX' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-zinc-100 text-zinc-500 hover:border-zinc-200"
-                        )}
-                      >
-                        <QrCode size={24} />
-                        <span className="text-xs font-black uppercase tracking-widest">PIX</span>
-                      </button>
-                      <button
-                        onClick={() => setMethod('CREDIT_CARD')}
-                        className={cn(
-                          "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2",
-                          method === 'CREDIT_CARD' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-zinc-100 text-zinc-500 hover:border-zinc-200"
-                        )}
-                      >
-                        <CreditCard size={24} />
-                        <span className="text-xs font-black uppercase tracking-widest">Cartão</span>
-                      </button>
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                      {acceptedPaymentMethods.pix && (
+                        <button
+                          onClick={() => setMethod('PIX')}
+                          className={cn(
+                            "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2",
+                            method === 'PIX' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-zinc-100 text-zinc-500 hover:border-zinc-200"
+                          )}
+                        >
+                          <QrCode size={24} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">PIX</span>
+                        </button>
+                      )}
+                      {acceptedPaymentMethods.creditCard && (
+                        <button
+                          onClick={() => setMethod('CREDIT_CARD')}
+                          className={cn(
+                            "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2",
+                            method === 'CREDIT_CARD' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-zinc-100 text-zinc-500 hover:border-zinc-200"
+                          )}
+                        >
+                          <CreditCard size={24} />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-center">Cartão</span>
+                        </button>
+                      )}
+                      {acceptedPaymentMethods.onSite && (
+                        <button
+                          onClick={() => setMethod('ON_SITE')}
+                          className={cn(
+                            "p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2",
+                            method === 'ON_SITE' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-zinc-100 text-zinc-500 hover:border-zinc-200"
+                          )}
+                        >
+                          <MapPin size={24} />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-center">No Local</span>
+                        </button>
+                      )}
                     </div>
+                  )}
+
+                  {/* On Site View */}
+                  {method === 'ON_SITE' && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center space-y-6 py-8"
+                    >
+                      <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+                        <MapPin size={40} />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-zinc-900">Pagar no Estabelecimento</h4>
+                        <p className="text-zinc-500 text-sm mt-2">
+                          Você realizará o pagamento diretamente na clínica no dia do seu agendamento.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handlePayOnSite}
+                        className="w-full bg-zinc-900 text-white py-4 rounded-2xl font-bold hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
+                      >
+                        Confirmar Agendamento
+                        <ArrowRight size={18} />
+                      </button>
+                    </motion.div>
                   )}
 
                   {/* Credit Card View */}

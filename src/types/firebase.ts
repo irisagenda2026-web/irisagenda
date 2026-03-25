@@ -31,6 +31,11 @@ export interface Plan {
     hasCustomBranding: boolean;
     hasNPS: boolean;
     hasMarketing: boolean;
+    availablePaymentMethods: {
+      pix: boolean;
+      creditCard: boolean;
+      onSite: boolean;
+    };
   };
   isActive: boolean;
   trialDays: number;
@@ -83,6 +88,11 @@ export interface Empresa {
     secondaryColor: string;
     showReviews: boolean;
     visibilityDays?: number; // Number of days visible in the calendar
+    acceptedPaymentMethods: {
+      pix: boolean;
+      creditCard: boolean;
+      onSite: boolean;
+    };
   };
   gallery?: string[];
   createdAt: number;

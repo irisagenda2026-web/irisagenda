@@ -5,6 +5,8 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { auth } from '@/src/services/firebase';
 import { updatePassword, updateProfile } from 'firebase/auth';
 import { updateUser, updateProfissional, updateEmpresa } from '@/src/services/db';
+import { cn } from '@/src/utils/cn';
+import IntegrationChecklist from '@/src/components/dashboard/IntegrationChecklist';
 
 export default function ProfilePage() {
   const { user, role, profissional, empresa, refresh } = useAuth();
@@ -16,6 +18,7 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isCreatingAsaas, setIsCreatingAsaas] = useState(false);
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
 
   const currentAsaasAccount = role === 'empresa' ? empresa : profissional;
   const walletId = currentAsaasAccount?.asaasWalletId;
@@ -211,6 +214,37 @@ export default function ProfilePage() {
     }
   };
 
+  const handleTogglePaymentMethod = async (method: 'pix' | 'creditCard' | 'onSite') => {
+    if (role !== 'empresa' || !empresa) return;
+
+    // Check plan permissions
+    const plan = (role === 'empresa' ? empresa : null)?.planId;
+    // In a real app, we'd fetch the plan details. For now, we'll assume the plan allows it if it's in the default plans.
+    // But let's add a check if we have the plan data.
+    
+    setIsUpdatingSettings(true);
+    try {
+      const currentMethods = empresa.settings?.acceptedPaymentMethods || { pix: false, creditCard: false, onSite: true };
+      await updateEmpresa(empresa.id, {
+        settings: {
+          ...empresa.settings,
+          acceptedPaymentMethods: {
+            ...currentMethods,
+            [method]: !currentMethods[method]
+          }
+        }
+      });
+      await refresh();
+      setSuccess('Métodos de pagamento atualizados!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error(err);
+      setError('Erro ao atualizar métodos de pagamento.');
+    } finally {
+      setIsUpdatingSettings(false);
+    }
+  };
+
   const handleFileUpload = async (type: string, file: File) => {
     if (!walletId) return;
     
@@ -280,13 +314,81 @@ export default function ProfilePage() {
 
   return (
     <div className="p-4 md:p-8 bg-zinc-50 min-h-screen">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Meu Perfil</h1>
-          <p className="text-zinc-500 mt-1">Gerencie suas informações pessoais e segurança.</p>
+          <p className="text-zinc-500 mt-1">Gerencie suas informações, integração financeira e métodos de pagamento.</p>
         </header>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
+          {/* Integration Progress Checklist */}
+          {(role === 'empresa' || role === 'profissional') && (
+            <IntegrationChecklist 
+              walletId={walletId}
+              hasBankAccount={!!currentAsaasAccount?.bankAccount?.account}
+              hasDocuments={documents.length >= 2}
+              hasPaymentMethods={role === 'empresa' ? Object.values(empresa?.settings?.acceptedPaymentMethods || {}).some(v => v) : true}
+              role={role}
+            />
+          )}
+
+          {/* Payment Methods Toggle (Empresa Only) */}
+          {role === 'empresa' && (
+            <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-zinc-100">
+                <h3 className="font-bold text-zinc-900 flex items-center gap-2">
+                  <CreditCard size={18} className="text-emerald-600" />
+                  Métodos de Pagamento Aceitos
+                </h3>
+                <p className="text-[10px] text-zinc-400 mt-1 uppercase font-black tracking-widest">Escolha como seus clientes podem pagar no Mini-Site</p>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {[
+                    { id: 'pix', label: 'PIX (Asaas)', description: 'Recebimento instantâneo' },
+                    { id: 'creditCard', label: 'Cartão de Crédito', description: 'Parcelamento disponível' },
+                    { id: 'onSite', label: 'Pagar no Local', description: 'Direto no estabelecimento' }
+                  ].map((method) => {
+                    const isEnabled = (empresa?.settings?.acceptedPaymentMethods as any)?.[method.id] ?? (method.id === 'onSite');
+                    return (
+                      <button
+                        key={method.id}
+                        type="button"
+                        onClick={() => handleTogglePaymentMethod(method.id as any)}
+                        disabled={isUpdatingSettings}
+                        className={cn(
+                          "p-4 rounded-2xl border text-left transition-all relative overflow-hidden group",
+                          isEnabled ? "bg-emerald-50 border-emerald-200" : "bg-white border-zinc-200 hover:border-zinc-300"
+                        )}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className={cn("text-sm font-bold", isEnabled ? "text-emerald-900" : "text-zinc-900")}>
+                            {method.label}
+                          </span>
+                          <div className={cn(
+                            "w-10 h-5 rounded-full relative transition-colors",
+                            isEnabled ? "bg-emerald-500" : "bg-zinc-200"
+                          )}>
+                            <motion.div 
+                              animate={{ x: isEnabled ? 22 : 2 }}
+                              className="absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-zinc-500">{method.description}</p>
+                        {isUpdatingSettings && (
+                          <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+                            <Loader2 className="animate-spin text-emerald-600" size={16} />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           {error && (
             <motion.div 

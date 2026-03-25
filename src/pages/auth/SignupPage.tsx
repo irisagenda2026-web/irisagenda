@@ -109,6 +109,11 @@ export default function SignupPage() {
           primaryColor: '#059669',
           secondaryColor: '#10b981',
           showReviews: true,
+          acceptedPaymentMethods: {
+            pix: true,
+            creditCard: true,
+            onSite: true
+          }
         }
       });
 

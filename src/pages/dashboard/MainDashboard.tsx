@@ -12,9 +12,10 @@ import { Agendamento, Servico, Profissional, Review } from '@/src/types/firebase
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useMemo } from 'react';
+import IntegrationChecklist from '@/src/components/dashboard/IntegrationChecklist';
 
 export default function MainDashboard() {
-  const { role, user: authUser, profissional: currentProfissional } = useAuth();
+  const { role, user: authUser, profissional: currentProfissional, empresa } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -133,6 +134,17 @@ export default function MainDashboard() {
               : 'Aqui está o que está acontecendo na sua clínica hoje.'}
           </p>
         </header>
+
+        {/* Integration Progress Checklist */}
+        {(role === 'empresa' || role === 'profissional') && (
+          <IntegrationChecklist 
+            walletId={role === 'empresa' ? empresa?.asaasWalletId : currentProfissional?.asaasWalletId}
+            hasBankAccount={role === 'empresa' ? !!empresa?.bankAccount?.account : !!currentProfissional?.bankAccount?.account}
+            hasDocuments={false} 
+            hasPaymentMethods={role === 'empresa' ? Object.values(empresa?.settings?.acceptedPaymentMethods || {}).some(v => v) : true}
+            role={role}
+          />
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
