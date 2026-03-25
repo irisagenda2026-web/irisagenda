@@ -3,24 +3,36 @@ import formidable from 'formidable';
 import fs from 'fs';
 import admin from 'firebase-admin';
 
-// Initialize Firebase Admin
-let credential;
-if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-  try {
-    const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
-    credential = admin.credential.cert(serviceAccount);
-  } catch (e) {
-    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64', e);
-  }
-}
+// Initialize Firebase Admin lazily
+let db: admin.firestore.Firestore | null = null;
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: credential || admin.credential.applicationDefault(),
-    projectId: "irisagenda-b6e66",
-    storageBucket: "irisagenda-b6e66.appspot.com"
-  });
-}
+const getDb = () => {
+  if (db) return db;
+  
+  if (!admin.apps.length) {
+    try {
+      let credential;
+      if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+        const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
+        credential = admin.credential.cert(serviceAccount);
+      }
+      
+      admin.initializeApp({
+        credential: credential || admin.credential.applicationDefault(),
+        projectId: "irisagenda-b6e66",
+        storageBucket: "irisagenda-b6e66.appspot.com"
+      });
+      db = admin.firestore();
+    } catch (e) {
+      console.error('Firebase Admin initialization error:', e);
+      throw new Error('Erro ao inicializar Firebase Admin. Verifique as credenciais.');
+    }
+  } else {
+    db = admin.firestore();
+  }
+  
+  return db;
+};
 
 export const config = {
   api: {
@@ -153,7 +165,7 @@ export default async function handler(req: any, res: any) {
 
       if (event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED') {
         const externalReference = payment.externalReference;
-        const db = admin.firestore();
+        const db = getDb();
         
         if (externalReference) {
           if (externalReference.startsWith('plan_')) {
