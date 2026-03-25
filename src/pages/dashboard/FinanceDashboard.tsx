@@ -25,41 +25,108 @@ import {
   Area
 } from 'recharts';
 import { auth } from '@/src/services/firebase';
-import { getAllAgendamentos, getProfissionais, getServicos, calculateCommission } from '@/src/services/db';
-import { Agendamento, Servico, Profissional } from '@/src/types/firebase';
+import { getAllAgendamentos, getProfissionais, getServicos, calculateCommission, getEmpresa } from '@/src/services/db';
+import { Agendamento, Servico, Profissional, Empresa } from '@/src/types/firebase';
 import { cn } from '@/src/utils/cn';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { toast } from 'react-hot-toast';
 
 export default function FinanceDashboard() {
   const { role, user, profissional: currentProf } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
+  const [asaasBalance, setAsaasBalance] = useState<number | null>(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       if (user?.empresaId) {
-        const [agData, svData] = await Promise.all([
+        const [agData, svData, empData] = await Promise.all([
           getAllAgendamentos(user.empresaId),
-          getServicos(user.empresaId)
+          getServicos(user.empresaId),
+          getEmpresa(user.empresaId)
         ]);
         setServicos(svData);
+        setEmpresa(empData);
         
         if (role === 'profissional') {
           if (currentProf) {
             setAgendamentos(agData.filter(a => a.profissionalId === currentProf.id));
+            // Fetch professional balance if they have a wallet
+            if (currentProf.asaasWalletId) {
+              fetchAsaasBalance();
+            }
           } else {
             setAgendamentos([]);
           }
         } else {
           setAgendamentos(agData);
+          // Fetch company balance
+          fetchAsaasBalance();
         }
       }
       setIsLoading(false);
     };
     loadData();
   }, [user?.empresaId, role, currentProf]);
+
+  const fetchAsaasBalance = async () => {
+    try {
+      const walletId = role === 'empresa' ? empresa?.asaasWalletId : currentProf?.asaasWalletId;
+      const apiKey = role === 'empresa' ? empresa?.asaasApiKey : currentProf?.asaasApiKey;
+      
+      // If we have an API key for the sub-account, use it
+      const url = apiKey ? `/api/asaas/balance?apiKey=${apiKey}` : '/api/asaas/balance';
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setAsaasBalance(data.balance);
+      }
+    } catch (error) {
+      console.error('Error fetching Asaas balance:', error);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!asaasBalance || asaasBalance <= 0) {
+      toast.error('Saldo insuficiente para saque.');
+      return;
+    }
+
+    if (!window.confirm(`Deseja solicitar o saque de R$ ${asaasBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para sua conta bancária cadastrada?`)) {
+      return;
+    }
+
+    setIsWithdrawing(true);
+    try {
+      const apiKey = role === 'empresa' ? empresa?.asaasApiKey : currentProf?.asaasApiKey;
+      
+      const response = await fetch('/api/asaas/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          value: asaasBalance,
+          apiKey: apiKey
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao processar saque');
+      }
+
+      toast.success('Solicitação de saque enviada com sucesso!');
+      fetchAsaasBalance();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
 
   const stats = {
     totalRevenue: agendamentos.reduce((acc, curr) => acc + (curr.status === 'completed' || curr.status === 'confirmed' ? curr.totalPrice : 0), 0),
@@ -121,8 +188,12 @@ export default function FinanceDashboard() {
               <Download size={16} />
               Relatórios
             </button>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-zinc-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg">
-              <CreditCard size={16} />
+            <button 
+              onClick={handleWithdraw}
+              disabled={isWithdrawing}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-zinc-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg disabled:opacity-50"
+            >
+              {isWithdrawing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard size={16} />}
               Sacar Saldo
             </button>
           </div>
@@ -152,9 +223,12 @@ export default function FinanceDashboard() {
               <div>
                 <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">
                   {showBalance 
-                    ? `R$ ${(isProf ? stats.totalCommission : stats.totalRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
+                    ? `R$ ${(asaasBalance !== null ? asaasBalance : (isProf ? stats.totalCommission : stats.totalRevenue)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
                     : '••••••'}
                 </h2>
+                {asaasBalance === null && (
+                  <p className="text-[10px] text-zinc-400 mt-1 italic">Saldo estimado (não sincronizado)</p>
+                )}
                 {!isProf && showBalance && (
                   <p className="text-xs font-bold text-emerald-600 mt-1">
                     Líquido: R$ {stats.totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

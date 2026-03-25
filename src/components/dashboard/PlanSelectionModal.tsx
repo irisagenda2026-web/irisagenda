@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plan } from '@/src/types/firebase';
-import { Check, X, Zap, Shield, Sparkles, Loader2, ArrowRight } from 'lucide-react';
+import { Check, X, Zap, Shield, Sparkles, Loader2, ArrowRight, QrCode } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
+import PaymentModal from './PaymentModal';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 interface PlanSelectionModalProps {
   isOpen: boolean;
@@ -19,10 +21,17 @@ export default function PlanSelectionModal({
   currentPlanId,
   onSelectPlan
 }: PlanSelectionModalProps) {
+  const { user, empresa } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const handleConfirm = async () => {
+    if (!selectedPlan) return;
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentSuccess = async () => {
     if (!selectedPlan) return;
     setIsSubmitting(true);
     try {
@@ -223,6 +232,23 @@ export default function PlanSelectionModal({
             </div>
           </motion.div>
         </div>
+      )}
+
+      {selectedPlan && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          value={selectedPlan.price}
+          description={`Assinatura Plano ${selectedPlan.name}`}
+          externalReference={`plan_${empresa?.id}_${selectedPlan.id}`}
+          customerData={{
+            name: user?.name || '',
+            email: user?.email || '',
+            cpfCnpj: '00000000000', // In a real app, we'd ask for this
+            phone: empresa?.phone
+          }}
+          onSuccess={handlePaymentSuccess}
+        />
       )}
     </AnimatePresence>
   );

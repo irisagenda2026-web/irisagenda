@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 
 import { generateTimeSlots as getAvailableTimeSlots, DEFAULT_BUSINESS_HOURS } from '@/src/utils/availability';
+import PaymentModal from '@/src/components/dashboard/PaymentModal';
 
 export default function PublicSite() {
   const { slug } = useParams<{ slug: string }>();
@@ -59,6 +60,8 @@ export default function PublicSite() {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState<string>('');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [pendingBookingData, setPendingBookingData] = useState<any>(null);
   
   // Upsell State
   const [upsells, setUpsells] = useState<Upsell[]>([]);
@@ -268,7 +271,12 @@ export default function PublicSite() {
         ? (totalPrice * commValue) / 100 
         : commValue;
 
-      await createAgendamentoSecure({
+      const split = selectedProfissional?.asaasWalletId ? [{
+        walletId: selectedProfissional.asaasWalletId,
+        fixedValue: commissionAmount
+      }] : undefined;
+
+      const bookingData = {
         empresaId: empresa.id,
         clienteId: currentUser?.id || 'guest',
         clienteName: currentUser?.name || 'Cliente',
@@ -284,19 +292,41 @@ export default function PublicSite() {
         commissionType: commType,
         commissionValue: commValue,
         commissionAmount,
-        addons: addonsToUse
+        addons: addonsToUse,
+        paymentStatus: 'pending',
+        split
+      };
+
+      setPendingBookingData(bookingData);
+      setIsPaymentModalOpen(true);
+      setIsSubmitting(false);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || 'Erro ao realizar agendamento. Tente novamente.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!pendingBookingData || !empresa) return;
+    
+    setIsSubmitting(true);
+    try {
+      const result = await createAgendamentoSecure({
+        ...pendingBookingData,
+        paymentStatus: 'paid',
+        paidAt: Date.now()
       });
 
-      const addonsText = addonsToUse.length > 0 
-        ? `\n*Add-ons:* ${addonsToUse.map(a => a.name).join(', ')}` 
-        : '';
+      const startTime = new Date(pendingBookingData.startTime);
+      const timeToUse = format(startTime, "HH:mm");
 
-      const message = `Olá! Acabei de realizar um agendamento:\n\n` +
-        `*Serviço:* ${selectedService.name}${addonsText}\n` +
-        `*Profissional:* ${selectedProfissional?.name || 'Profissional'}\n` +
+      const message = `Olá! Acabei de realizar um agendamento (PAGO):\n\n` +
+        `*Serviço:* ${pendingBookingData.servicoName}\n` +
+        `*Profissional:* ${pendingBookingData.profissionalName}\n` +
         `*Data:* ${format(startTime, "dd/MM/yyyy", { locale: ptBR })}\n` +
         `*Horário:* ${timeToUse}\n` +
-        `*Valor Total:* R$ ${totalPrice.toLocaleString('pt-BR')}\n\n` +
+        `*Valor Total:* R$ ${pendingBookingData.totalPrice.toLocaleString('pt-BR')}\n\n` +
         `Aguardo confirmação!`;
       
       const phone = empresa.whatsapp || empresa.phone || '';
@@ -307,9 +337,10 @@ export default function PublicSite() {
       }
 
       setStep('success');
+      setIsPaymentModalOpen(false);
     } catch (error: any) {
       console.error(error);
-      alert(error.message || 'Erro ao realizar agendamento. Tente novamente.');
+      alert('Erro ao confirmar agendamento após pagamento. Por favor, entre em contato com a clínica.');
     } finally {
       setIsSubmitting(false);
     }
@@ -887,6 +918,24 @@ export default function PublicSite() {
           </div>
         </div>
       </div>
+
+      {pendingBookingData && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          value={pendingBookingData.totalPrice}
+          description={`Pagamento: ${pendingBookingData.servicoName}`}
+          externalReference={`appt_${Date.now()}`}
+          customerData={{
+            name: pendingBookingData.clienteName,
+            email: user?.email || '',
+            cpfCnpj: '00000000000',
+            phone: pendingBookingData.clientePhone
+          }}
+          split={pendingBookingData.split}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

@@ -46,9 +46,17 @@ export interface Empresa {
   faviconUrl?: string;
   coverUrl?: string;
   address: string;
+  addressNumber?: string;
+  province?: string;
+  postalCode?: string;
   phone: string;
   whatsapp: string;
+  cpfCnpj?: string;
+  companyType?: 'INDIVIDUAL' | 'MEI' | 'LIMITED' | 'ASSOCIATION';
   category: 'beauty' | 'aesthetics' | 'health';
+  asaasCustomerId?: string; // Asaas Customer ID
+  asaasWalletId?: string; // Asaas Wallet ID for receiving payments
+  asaasApiKey?: string; // Asaas API Key for the sub-account
   serviceCategories?: string[]; // Custom categories created by the company
   ownerId: string;
   planId: string; // Reference to Plan.id
@@ -62,6 +70,13 @@ export interface Empresa {
       last4: string;
       cardToken?: string; // For future Pagar.me integration
     };
+  };
+  bankAccount?: {
+    bankCode: string;
+    agency: string;
+    account: string;
+    accountDigit: string;
+    bankAccountType: 'CHECKING' | 'SAVINGS';
   };
   settings: {
     primaryColor: string;
@@ -159,6 +174,8 @@ export interface Coupon {
 export interface Profissional {
   id: string;
   empresaId: string;
+  asaasWalletId?: string;
+  asaasApiKey?: string;
   userId?: string; // Link to the User account
   name: string;
   email?: string;
@@ -167,6 +184,13 @@ export interface Profissional {
   avatarUrl?: string;
   specialties?: string[]; // IDs of services or just strings
   isActive: boolean;
+  bankAccount?: {
+    bankCode: string;
+    agency: string;
+    account: string;
+    accountDigit: string;
+    bankAccountType: 'CHECKING' | 'SAVINGS';
+  };
   createdAt: number;
 }
 

@@ -14,7 +14,8 @@ import {
   X,
   ShieldCheck,
   UserPlus,
-  DollarSign
+  DollarSign,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getProfissionais, addProfissional, updateProfissional, deleteProfissional, getEmpresa } from '../../services/db';
@@ -35,11 +36,20 @@ export default function ProfissionaisPage() {
     email: '',
     phone: '',
     bio: '',
+    asaasWalletId: '',
     isActive: true,
     createAccount: false,
-    password: ''
+    password: '',
+    // Asaas Onboarding
+    cpfCnpj: '',
+    postalCode: '',
+    address: '',
+    addressNumber: '',
+    province: '',
+    companyType: 'INDIVIDUAL' as 'INDIVIDUAL' | 'MEI' | 'LIMITED' | 'ASSOCIATION'
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreatingAsaas, setIsCreatingAsaas] = useState(false);
 
   const planName = (empresa?.plan || empresa?.planId || 'BÁSICO').toUpperCase();
   const planLimit = empresa ? (PLAN_LIMITS[empresa.plan] || PLAN_LIMITS[empresa.planId])?.maxProfessionals || 1 : 1;
@@ -82,6 +92,7 @@ export default function ProfissionaisPage() {
           email: formData.email,
           phone: formData.phone,
           bio: formData.bio,
+          asaasWalletId: formData.asaasWalletId,
           isActive: formData.isActive
         });
 
@@ -115,6 +126,7 @@ export default function ProfissionaisPage() {
           email: formData.email,
           phone: formData.phone,
           bio: formData.bio,
+          asaasWalletId: formData.asaasWalletId,
           isActive: formData.isActive
         });
 
@@ -130,9 +142,16 @@ export default function ProfissionaisPage() {
         email: '', 
         phone: '', 
         bio: '', 
+        asaasWalletId: '',
         isActive: true,
         createAccount: false,
-        password: ''
+        password: '',
+        cpfCnpj: '',
+        postalCode: '',
+        address: '',
+        addressNumber: '',
+        province: '',
+        companyType: 'INDIVIDUAL'
       });
       loadData();
     } catch (error) {
@@ -194,6 +213,49 @@ export default function ProfissionaisPage() {
     }
   };
 
+  const handleCreateAsaasWallet = async () => {
+    if (!formData.cpfCnpj || !formData.postalCode || !formData.address || !formData.addressNumber || !formData.province) {
+      alert('Por favor, preencha todos os campos de endereço e CPF/CNPJ para criar a carteira Asaas.');
+      return;
+    }
+
+    setIsCreatingAsaas(true);
+    try {
+      const response = await fetch('/api/asaas/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          cpfCnpj: formData.cpfCnpj.replace(/\D/g, ''),
+          companyType: formData.companyType,
+          mobilePhone: formData.phone.replace(/\D/g, ''),
+          postalCode: formData.postalCode.replace(/\D/g, ''),
+          address: formData.address,
+          addressNumber: formData.addressNumber,
+          province: formData.province
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao criar carteira Asaas');
+      }
+
+      const account = await response.json();
+      setFormData(prev => ({ 
+        ...prev, 
+        asaasWalletId: account.walletId,
+        asaasApiKey: account.apiKey
+      }));
+      alert('Carteira Asaas criada com sucesso! O ID e a Chave API foram preenchidos automaticamente.');
+    } catch (error: any) {
+      alert('Erro ao criar carteira Asaas: ' + error.message);
+    } finally {
+      setIsCreatingAsaas(false);
+    }
+  };
+
   const filteredProfissionais = profissionais.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -220,9 +282,16 @@ export default function ProfissionaisPage() {
               email: '', 
               phone: '', 
               bio: '', 
+              asaasWalletId: '',
               isActive: true,
               createAccount: false,
-              password: ''
+              password: '',
+              cpfCnpj: '',
+              postalCode: '',
+              address: '',
+              addressNumber: '',
+              province: '',
+              companyType: 'INDIVIDUAL'
             });
             setIsModalOpen(true);
           }}
@@ -314,7 +383,16 @@ export default function ProfissionaisPage() {
                         email: prof.email || '',
                         phone: prof.phone || '',
                         bio: prof.bio || '',
-                        isActive: prof.isActive
+                        asaasWalletId: prof.asaasWalletId || '',
+                        isActive: prof.isActive,
+                        createAccount: false,
+                        password: '',
+                        cpfCnpj: '',
+                        postalCode: '',
+                        address: '',
+                        addressNumber: '',
+                        province: '',
+                        companyType: 'INDIVIDUAL'
                       });
                       setIsModalOpen(true);
                     }}
@@ -445,6 +523,107 @@ export default function ProfissionaisPage() {
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
                     placeholder="Breve descrição do profissional..."
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ID da Carteira Asaas (Split)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.asaasWalletId}
+                      onChange={(e) => setFormData({ ...formData, asaasWalletId: e.target.value })}
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="ID da carteira..."
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-zinc-900 uppercase tracking-widest">Onboarding Asaas</h3>
+                    <span className="text-[10px] text-zinc-400 font-bold">Automação de Split</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">CPF/CNPJ</label>
+                      <input
+                        type="text"
+                        value={formData.cpfCnpj}
+                        onChange={(e) => setFormData({ ...formData, cpfCnpj: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none"
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Tipo</label>
+                      <select
+                        value={formData.companyType}
+                        onChange={(e) => setFormData({ ...formData, companyType: e.target.value as any })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none"
+                      >
+                        <option value="INDIVIDUAL">Pessoa Física</option>
+                        <option value="MEI">MEI</option>
+                        <option value="LIMITED">LTDA</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Endereço</label>
+                      <input
+                        type="text"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none"
+                        placeholder="Rua..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Nº</label>
+                      <input
+                        type="text"
+                        value={formData.addressNumber}
+                        onChange={(e) => setFormData({ ...formData, addressNumber: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none"
+                        placeholder="123"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Bairro</label>
+                      <input
+                        type="text"
+                        value={formData.province}
+                        onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none"
+                        placeholder="Bairro..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">CEP</label>
+                      <input
+                        type="text"
+                        value={formData.postalCode}
+                        onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs outline-none"
+                        placeholder="00000-000"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCreateAsaasWallet}
+                    disabled={isCreatingAsaas}
+                    className="w-full py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isCreatingAsaas ? <Loader2 className="animate-spin w-3 h-3" /> : <DollarSign className="w-3 h-3" />}
+                    Gerar Carteira Asaas Automaticamente
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-2">

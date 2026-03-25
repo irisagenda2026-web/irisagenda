@@ -5,6 +5,7 @@ import admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { asaasService } from './api/asaas-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -143,6 +144,206 @@ async function startServer() {
     } catch (error: any) {
       console.error('Server Create Professional Error:', error);
       res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+    }
+  });
+
+  // --- Asaas Payment Routes ---
+
+  // Create Customer in Asaas
+  app.post('/api/asaas/customer', async (req, res) => {
+    try {
+      const { name, email, cpfCnpj, phone } = req.body;
+      const customer = await asaasService.createCustomer({ name, email, cpfCnpj, phone });
+      res.status(200).json(customer);
+    } catch (error: any) {
+      console.error('Asaas Create Customer Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create Sub-account in Asaas
+  app.post('/api/asaas/account', async (req, res) => {
+    try {
+      const account = await asaasService.createAccount(req.body);
+      res.status(200).json(account);
+    } catch (error: any) {
+      console.error('Asaas Create Account Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update Sub-account in Asaas
+  app.post('/api/asaas/account/:id', async (req, res) => {
+    try {
+      const account = await asaasService.updateAccount(req.params.id, req.body);
+      res.status(200).json(account);
+    } catch (error: any) {
+      console.error('Asaas Update Account Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get Sub-account Documents
+  app.get('/api/asaas/account/:id/documents', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = await asaasService.getDocuments(id);
+      res.status(200).json(data);
+    } catch (error: any) {
+      console.error('Asaas Get Documents Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Upload Sub-account Document
+  app.post('/api/asaas/account/:id/documents', upload.single('file'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { type } = req.body;
+      
+      if (!req.file) {
+        return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+      }
+
+      const formData = new FormData();
+      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+      formData.append('file', blob, req.file.originalname);
+      formData.append('type', type);
+
+      const data = await asaasService.uploadDocument(id, formData);
+      res.status(200).json(data);
+    } catch (error: any) {
+      console.error('Asaas Upload Document Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create Payment with Split
+  app.post('/api/asaas/payment', async (req, res) => {
+    try {
+      const { 
+        customer, 
+        billingType, 
+        value, 
+        dueDate, 
+        description, 
+        externalReference, 
+        split,
+        creditCard,
+        creditCardHolderInfo,
+        remoteIp
+      } = req.body;
+
+      const paymentData: any = {
+        customer,
+        billingType,
+        value,
+        dueDate,
+        description,
+        externalReference,
+        split
+      };
+
+      if (billingType === 'CREDIT_CARD') {
+        paymentData.creditCard = creditCard;
+        paymentData.creditCardHolderInfo = creditCardHolderInfo;
+        paymentData.remoteIp = remoteIp || req.ip;
+      }
+
+      const payment = await asaasService.createPayment(paymentData);
+      res.status(200).json(payment);
+    } catch (error: any) {
+      console.error('Asaas Create Payment Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get Payment Status
+  app.get('/api/asaas/payment-status/:id', async (req, res) => {
+    try {
+      const status = await asaasService.getPaymentStatus(req.params.id);
+      res.status(200).json(status);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get PIX QR Code
+  app.get('/api/asaas/pix-qrcode/:id', async (req, res) => {
+    try {
+      const qrcode = await asaasService.getPixQrCode(req.params.id);
+      res.status(200).json(qrcode);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get Balance
+  app.get('/api/asaas/balance', async (req, res) => {
+    try {
+      const apiKey = req.query.apiKey as string;
+      const balance = await asaasService.getBalance(apiKey);
+      res.status(200).json(balance);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Request Transfer (Withdraw)
+  app.post('/api/asaas/transfer', async (req, res) => {
+    try {
+      const { value, bankAccount, apiKey } = req.body;
+      const transfer = await asaasService.transfer({ value, bankAccount }, apiKey);
+      res.status(200).json(transfer);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Webhook for Asaas Notifications
+  app.post('/api/asaas/webhook', async (req, res) => {
+    const { event, payment } = req.body;
+    const webhookToken = req.headers['asaas-access-token'];
+
+    // Verify webhook token if configured
+    if (process.env.ASAAS_WEBHOOK_TOKEN && webhookToken !== process.env.ASAAS_WEBHOOK_TOKEN) {
+      return res.status(401).json({ error: 'Não autorizado' });
+    }
+
+    console.log(`Asaas Webhook Received: ${event}`, payment.id);
+
+    try {
+      const db = admin.firestore();
+
+      if (event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED') {
+        const externalReference = payment.externalReference;
+        
+        if (externalReference) {
+          // Handle Plan Subscriptions
+          if (externalReference.startsWith('plan_')) {
+            const [_, empresaId, planId] = externalReference.split('_');
+            await db.collection('empresas').doc(empresaId).update({
+              planId,
+              'subscription.status': 'active',
+              'subscription.currentPeriodEnd': Date.now() + (30 * 24 * 60 * 60 * 1000)
+            });
+          }
+          
+          // Handle Appointments
+          if (externalReference.startsWith('appt_')) {
+            const [_, apptId] = externalReference.split('_');
+            await db.collection('agendamentos').doc(apptId).update({
+              paymentStatus: 'paid',
+              paidAt: Date.now()
+            });
+          }
+        }
+      }
+
+      res.status(200).send('OK');
+    } catch (error: any) {
+      console.error('Asaas Webhook Error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 

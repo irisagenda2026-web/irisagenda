@@ -155,10 +155,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (userDoc.exists()) {
           const userData = userDoc.data() as User;
           setUser({ ...userData, id: user.id });
+          setRoleState(userData.role);
+
           if (userData.empresaId) {
             const empresaDoc = await getDoc(doc(db, 'empresas', userData.empresaId));
             if (empresaDoc.exists()) {
               setEmpresa({ id: empresaDoc.id, ...empresaDoc.data() } as Empresa);
+            }
+
+            if (userData.role === 'profissional') {
+              const q = query(
+                collection(db, 'profissionais'), 
+                where('empresaId', '==', userData.empresaId),
+                where('userId', '==', user.id)
+              );
+              const profsSnap = await getDocs(q);
+              if (!profsSnap.empty) {
+                const profDoc = profsSnap.docs[0];
+                setProfissional({ id: profDoc.id, ...profDoc.data() } as Profissional);
+              }
             }
           }
         }
