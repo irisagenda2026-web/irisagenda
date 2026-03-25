@@ -77,6 +77,7 @@ export default function AdminDashboard() {
               }
             },
             isActive: true,
+            isHighlighted: false,
             trialDays: 15
           },
           {
@@ -101,6 +102,32 @@ export default function AdminDashboard() {
               }
             },
             isActive: true,
+            isHighlighted: true,
+            trialDays: 15
+          },
+          {
+            name: 'Enterprise',
+            price: 499,
+            interval: 'monthly' as const,
+            description: 'Para redes e grandes centros de estética.',
+            features: ['Tudo do Profissional', 'Multi-unidades (Franquias)', 'Relatórios customizados', 'Gerente de conta dedicado'],
+            permissions: { 
+              maxProfessionals: 100, 
+              maxServices: 500,
+              hasUpsells: true, 
+              hasCoupons: true,
+              hasReviews: true,
+              hasCustomBranding: true, 
+              hasNPS: true,
+              hasMarketing: true,
+              availablePaymentMethods: {
+                pix: true,
+                creditCard: true,
+                onSite: true
+              }
+            },
+            isActive: true,
+            isHighlighted: false,
             trialDays: 15
           }
         ];
@@ -136,6 +163,103 @@ export default function AdminDashboard() {
       console.error(err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSeedDefaults = async () => {
+    if (!confirm('Isso irá adicionar os planos padrão (Essencial, Profissional, Enterprise) se eles não existirem. Continuar?')) return;
+    
+    try {
+      const defaultPlans = [
+        {
+          name: 'Essencial',
+          price: 89,
+          interval: 'monthly' as const,
+          description: 'Perfeito para profissionais autônomos.',
+          features: ['Agenda Online Inteligente', 'Até 2 profissionais', 'Lembretes via WhatsApp'],
+          permissions: { 
+            maxProfessionals: 2, 
+            maxServices: 10,
+            hasUpsells: false, 
+            hasCoupons: false,
+            hasReviews: true,
+            hasCustomBranding: false, 
+            hasNPS: false,
+            hasMarketing: false,
+            availablePaymentMethods: {
+              pix: true,
+              creditCard: true,
+              onSite: true
+            }
+          },
+          isActive: true,
+          isHighlighted: false,
+          trialDays: 15
+        },
+        {
+          name: 'Profissional',
+          price: 159,
+          interval: 'monthly' as const,
+          description: 'O melhor para clínicas em crescimento.',
+          features: ['Tudo do Essencial', 'Agendamentos ilimitados', 'Gestão Financeira'],
+          permissions: { 
+            maxProfessionals: 10, 
+            maxServices: 50,
+            hasUpsells: true, 
+            hasCoupons: true,
+            hasReviews: true,
+            hasCustomBranding: true, 
+            hasNPS: true,
+            hasMarketing: true,
+            availablePaymentMethods: {
+              pix: true,
+              creditCard: true,
+              onSite: true
+            }
+          },
+          isActive: true,
+          isHighlighted: true,
+          trialDays: 15
+        },
+        {
+          name: 'Enterprise',
+          price: 499,
+          interval: 'monthly' as const,
+          description: 'Para redes e grandes centros de estética.',
+          features: ['Tudo do Profissional', 'Multi-unidades (Franquias)', 'Relatórios customizados', 'Gerente de conta dedicado'],
+          permissions: { 
+            maxProfessionals: 100, 
+            maxServices: 500,
+            hasUpsells: true, 
+            hasCoupons: true,
+            hasReviews: true,
+            hasCustomBranding: true, 
+            hasNPS: true,
+            hasMarketing: true,
+            availablePaymentMethods: {
+              pix: true,
+              creditCard: true,
+              onSite: true
+            }
+          },
+          isActive: true,
+          isHighlighted: false,
+          trialDays: 15
+        }
+      ];
+
+      for (const p of defaultPlans) {
+        const exists = plans.some(existing => existing.name === p.name);
+        if (!exists) {
+          await createPlan(p as any);
+        }
+      }
+      
+      toast.success('Planos padrão adicionados!');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao semear planos');
     }
   };
 
@@ -223,16 +347,24 @@ export default function AdminDashboard() {
               <div className="p-8">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-xl font-bold text-zinc-900">Gerenciar Planos</h3>
-                  <button 
-                    onClick={() => {
-                      setEditingPlan(null);
-                      setIsPlanModalOpen(true);
-                    }}
-                    className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all flex items-center gap-2"
-                  >
-                    <Plus size={18} />
-                    Criar Novo Plano
-                  </button>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={handleSeedDefaults}
+                      className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-sm hover:bg-zinc-200 transition-all"
+                    >
+                      Resetar Padrões
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setEditingPlan(null);
+                        setIsPlanModalOpen(true);
+                      }}
+                      className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all flex items-center gap-2"
+                    >
+                      <Plus size={18} />
+                      Criar Novo Plano
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {plans.map(plan => (
@@ -488,6 +620,7 @@ function PlanModal({ plan, onClose, onSave }: { plan: Plan | null, onClose: () =
       }
     },
     isActive: true,
+    isHighlighted: false,
     trialDays: 15
   });
   const [newFeature, setNewFeature] = useState('');
@@ -680,7 +813,7 @@ function PlanModal({ plan, onClose, onSave }: { plan: Plan | null, onClose: () =
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
                 type="checkbox"
@@ -689,6 +822,15 @@ function PlanModal({ plan, onClose, onSave }: { plan: Plan | null, onClose: () =
                 className="w-4 h-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
               />
               <span className="text-sm font-bold text-zinc-900">Plano Ativo</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="checkbox"
+                checked={formData.isHighlighted}
+                onChange={e => setFormData({ ...formData, isHighlighted: e.target.checked })}
+                className="w-4 h-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className="text-sm font-bold text-zinc-900">Destacar Plano (Recomendado)</span>
             </label>
           </div>
         </form>

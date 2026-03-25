@@ -38,6 +38,7 @@ export interface Plan {
     };
   };
   isActive: boolean;
+  isHighlighted?: boolean;
   trialDays: number;
   createdAt: number;
 }

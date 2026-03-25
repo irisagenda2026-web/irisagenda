@@ -82,8 +82,8 @@ export default function PlanSelectionModal({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {plans.map((plan) => {
                     const isCurrent = plan.id === currentPlanId;
-                    const isEnterprise = plan.id === 'enterprise';
-                    const isProfissional = plan.id === 'profissional';
+                    const isHighlighted = plan.isHighlighted;
+                    const Icon = plan.name.toLowerCase().includes('enterprise') ? Shield : isHighlighted ? Sparkles : Zap;
 
                     return (
                       <motion.div
@@ -103,7 +103,7 @@ export default function PlanSelectionModal({
                           </div>
                         )}
 
-                        {isProfissional && (
+                        {isHighlighted && (
                           <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-zinc-900 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
                             Mais Popular
                           </div>
@@ -112,9 +112,9 @@ export default function PlanSelectionModal({
                         <div className="mb-8">
                           <div className={cn(
                             "w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-inner",
-                            isEnterprise ? "bg-zinc-900 text-white" : "bg-emerald-100 text-emerald-600"
+                            isHighlighted ? "bg-zinc-900 text-white" : "bg-emerald-100 text-emerald-600"
                           )}>
-                            {isEnterprise ? <Shield size={28} /> : isProfissional ? <Sparkles size={28} /> : <Zap size={28} />}
+                            <Icon size={28} />
                           </div>
                           <h3 className="text-2xl font-black text-zinc-900 mb-2">{plan.name}</h3>
                           <p className="text-zinc-500 text-sm font-medium leading-relaxed">{plan.description}</p>
@@ -144,7 +144,7 @@ export default function PlanSelectionModal({
                             "w-full py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2",
                             isCurrent
                               ? "bg-emerald-100 text-emerald-700 cursor-not-allowed"
-                              : isEnterprise
+                              : isHighlighted
                                 ? "bg-zinc-900 text-white hover:bg-zinc-800 shadow-lg shadow-zinc-200"
                                 : "bg-white border-2 border-zinc-900 text-zinc-900 hover:bg-zinc-900 hover:text-white"
                           )}
