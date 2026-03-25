@@ -178,12 +178,12 @@ export default function ProfilePage() {
         })
       });
 
+      const accountData = await response.json();
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Erro ao criar carteira Asaas');
+        throw new Error(accountData.error || 'Erro ao criar carteira Asaas');
       }
 
-      const account = await response.json();
+      const account = accountData;
       
       // Update in Firestore
       if (role === 'empresa' && empresa) {

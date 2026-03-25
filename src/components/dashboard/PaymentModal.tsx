@@ -92,7 +92,13 @@ export default function PaymentModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(customerData),
       });
-      const customer = await customerResponse.json();
+      
+      const customerDataResponse = await customerResponse.json();
+      if (!customerResponse.ok) {
+        throw new Error(customerDataResponse.error || 'Erro ao criar cliente no Asaas');
+      }
+      
+      const customer = customerDataResponse;
 
       // 2. Create PIX payment
       const paymentResponse = await fetch('/api/asaas/payment', {
@@ -108,15 +114,26 @@ export default function PaymentModal({
           split,
         }),
       });
-      const payment = await paymentResponse.json();
+      
+      const paymentData = await paymentResponse.json();
+      if (!paymentResponse.ok) {
+        throw new Error(paymentData.error || 'Erro ao criar pagamento no Asaas');
+      }
+      
+      const payment = paymentData;
       
       // 3. Get PIX QR Code
       const pixResponse = await fetch(`/api/asaas/pix-qrcode/${payment.id}`);
-      const pix = await pixResponse.json();
       
-      setPixData(pix);
+      const pixData = await pixResponse.json();
+      if (!pixResponse.ok) {
+        throw new Error(pixData.error || 'Erro ao gerar QR Code');
+      }
+      
+      setPixData(pixData);
       setPaymentId(payment.id);
     } catch (error: any) {
+      console.error('PIX Generation Error:', error);
       toast.error(error.message || 'Erro ao gerar PIX');
     } finally {
       setIsProcessing(false);
@@ -133,7 +150,13 @@ export default function PaymentModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(customerData),
       });
-      const customer = await customerResponse.json();
+      
+      const customerDataResponse = await customerResponse.json();
+      if (!customerResponse.ok) {
+        throw new Error(customerDataResponse.error || 'Erro ao criar cliente no Asaas');
+      }
+      
+      const customer = customerDataResponse;
 
       // 2. Create Credit Card payment
       const paymentResponse = await fetch('/api/asaas/payment', {
@@ -165,12 +188,12 @@ export default function PaymentModal({
         }),
       });
       
+      const paymentData = await paymentResponse.json();
       if (!paymentResponse.ok) {
-        const error = await paymentResponse.json();
-        throw new Error(error.error || 'Erro ao processar cartão');
+        throw new Error(paymentData.error || 'Erro ao processar cartão');
       }
 
-      const payment = await paymentResponse.json();
+      const payment = paymentData;
       
       if (payment.status === 'CONFIRMED' || payment.status === 'RECEIVED') {
         setStatus('CONFIRMED');

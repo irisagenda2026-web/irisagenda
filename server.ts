@@ -5,7 +5,10 @@ import admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 import { asaasService } from './api/asaas-service.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,7 +56,12 @@ async function startServer() {
     res.json({ 
       status: 'ok', 
       timestamp: new Date().toISOString(),
-      firebaseAdmin: admin.apps.length > 0 ? 'initialized' : 'not_initialized'
+      firebaseAdmin: admin.apps.length > 0 ? 'initialized' : 'not_initialized',
+      asaas: {
+        apiKey: !!process.env.ASAAS_API_KEY,
+        environment: process.env.ASAAS_ENVIRONMENT || 'sandbox',
+        webhookToken: !!process.env.ASAAS_WEBHOOK_TOKEN
+      }
     });
   });
 

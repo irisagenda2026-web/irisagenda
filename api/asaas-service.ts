@@ -26,7 +26,14 @@ async function asaasRequest(endpoint: string, method: string = 'GET', body?: any
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await response.json();
+  let data;
+  const text = await response.text();
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    console.error('Asaas API Response Parse Error:', text);
+    throw new Error(`Erro ao processar resposta da API do Asaas: ${text.slice(0, 100)}`);
+  }
 
   if (!response.ok) {
     console.error('Asaas API Error:', data);
