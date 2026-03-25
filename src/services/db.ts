@@ -235,6 +235,12 @@ export const getPlans = async () => {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Plan));
 };
 
+export const getAllPlans = async () => {
+  const q = query(collection(db, 'plans'), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Plan));
+};
+
 export const createPlan = async (data: Omit<Plan, 'id' | 'createdAt'>) => {
   return await addDoc(collection(db, 'plans'), {
     ...data,
@@ -245,6 +251,11 @@ export const createPlan = async (data: Omit<Plan, 'id' | 'createdAt'>) => {
 export const updatePlan = async (id: string, data: Partial<Plan>) => {
   const docRef = doc(db, 'plans', id);
   await updateDoc(docRef, data);
+};
+
+export const deletePlan = async (id: string) => {
+  const docRef = doc(db, 'plans', id);
+  await deleteDoc(docRef);
 };
 
 // Reviews
