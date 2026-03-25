@@ -1,19 +1,27 @@
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
-const ASAAS_ENVIRONMENT = process.env.ASAAS_ENVIRONMENT || 'sandbox';
-const ASAAS_URL = ASAAS_ENVIRONMENT === 'sandbox' 
-  ? 'https://sandbox.asaas.com/api/v3' 
-  : 'https://www.asaas.com/api/v3';
+const getAsaasApiKey = () => {
+  const key = process.env.ASAAS_API_KEY;
+  if (!key) {
+    throw new Error('ASAAS_API_KEY não configurada. Por favor, adicione esta chave nas configurações do AI Studio (Settings > Secrets).');
+  }
+  return key;
+};
+
+const getAsaasUrl = () => {
+  const env = process.env.ASAAS_ENVIRONMENT || 'sandbox';
+  return env === 'sandbox' 
+    ? 'https://sandbox.asaas.com/api/v3' 
+    : 'https://www.asaas.com/api/v3';
+};
 
 async function asaasRequest(endpoint: string, method: string = 'GET', body?: any) {
-  if (!ASAAS_API_KEY) {
-    throw new Error('ASAAS_API_KEY não configurada');
-  }
+  const apiKey = getAsaasApiKey();
+  const baseUrl = getAsaasUrl();
 
-  const response = await fetch(`${ASAAS_URL}${endpoint}`, {
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -94,26 +102,26 @@ export const asaasService = {
   // Financeiro
   getBalance: async (apiKey?: string) => {
     // Se passar uma apiKey, busca o saldo da subconta, senão busca da conta principal
-    const url = `${ASAAS_URL}/finance/balance`;
+    const baseUrl = getAsaasUrl();
     const headers: any = {
       'Content-Type': 'application/json',
-      'access_token': apiKey || ASAAS_API_KEY,
+      'access_token': apiKey || getAsaasApiKey(),
     };
 
-    const response = await fetch(url, { headers });
+    const response = await fetch(`${baseUrl}/finance/balance`, { headers });
     const data = await response.json();
     if (!response.ok) throw new Error(data.errors?.[0]?.description || 'Erro ao buscar saldo');
     return data;
   },
 
   transfer: async (data: { value: number; bankAccount?: any }, apiKey?: string) => {
-    const url = `${ASAAS_URL}/transfers`;
+    const baseUrl = getAsaasUrl();
     const headers: any = {
       'Content-Type': 'application/json',
-      'access_token': apiKey || ASAAS_API_KEY,
+      'access_token': apiKey || getAsaasApiKey(),
     };
 
-    const response = await fetch(url, {
+    const response = await fetch(`${baseUrl}/transfers`, {
       method: 'POST',
       headers,
       body: JSON.stringify(data),
@@ -128,12 +136,13 @@ export const asaasService = {
   },
   
   uploadDocument: async (id: string, formData: any) => {
-    if (!ASAAS_API_KEY) throw new Error('ASAAS_API_KEY não configurada');
+    const apiKey = getAsaasApiKey();
+    const baseUrl = getAsaasUrl();
     
-    const response = await fetch(`${ASAAS_URL}/accounts/${id}/documents`, {
+    const response = await fetch(`${baseUrl}/accounts/${id}/documents`, {
       method: 'POST',
       headers: {
-        'access_token': ASAAS_API_KEY,
+        'access_token': apiKey,
       },
       body: formData,
     });
