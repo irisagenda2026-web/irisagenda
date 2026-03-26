@@ -138,6 +138,10 @@ export default function PaymentModal({
       
       const payment = paymentData;
       
+      if (!payment || !payment.id) {
+        throw new Error('Falha ao obter ID do pagamento do Asaas');
+      }
+      
       // 3. Get PIX QR Code
       const pixResponse = await fetch(`/api/asaas/pix-qrcode/${payment.id}`);
       
@@ -222,6 +226,10 @@ export default function PaymentModal({
       }
 
       const payment = paymentData;
+      
+      if (!payment || !payment.id) {
+        throw new Error('Falha ao obter ID do pagamento do Asaas');
+      }
       
       if (payment.status === 'CONFIRMED' || payment.status === 'RECEIVED') {
         setStatus('CONFIRMED');

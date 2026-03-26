@@ -36,7 +36,12 @@ async function asaasRequest(endpoint: string, method: string = 'GET', body?: any
   }
 
   if (!response.ok) {
-    console.error('Asaas API Error:', data);
+    console.error('Asaas API Error:', {
+      endpoint,
+      method,
+      status: response.status,
+      data
+    });
     throw new Error(data.errors?.[0]?.description || 'Erro na API do Asaas');
   }
 

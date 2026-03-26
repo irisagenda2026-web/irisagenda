@@ -258,11 +258,16 @@ async function startServer() {
         paymentData.remoteIp = remoteIp || req.ip;
       }
 
+      console.log('Creating Asaas payment with data:', JSON.stringify(paymentData, null, 2));
       const payment = await asaasService.createPayment(paymentData);
+      console.log('Asaas payment created successfully:', payment.id);
       res.status(200).json(payment);
     } catch (error: any) {
       console.error('Asaas Create Payment Error:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ 
+        error: error.message || 'Erro interno ao criar pagamento',
+        details: error.stack
+      });
     }
   });
 
@@ -329,7 +334,7 @@ async function startServer() {
         if (externalReference) {
           // Handle Plan Subscriptions
           if (externalReference.startsWith('plan_')) {
-            const [_, empresaId, planId] = externalReference.split('_');
+            const [_, planId, empresaId] = externalReference.split('_');
             await db.collection('empresas').doc(empresaId).update({
               planId,
               'subscription.status': 'active',
