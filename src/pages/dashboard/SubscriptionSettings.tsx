@@ -205,6 +205,7 @@ export default function SubscriptionSettings() {
           value={currentPlan.price}
           description={`Assinatura ${currentPlan.name}`}
           externalReference={`plan_${currentPlan.id}_${empresa.id}`}
+          empresaId={empresa.id}
           customerData={{
             name: empresa.name,
             email: user?.email || '',

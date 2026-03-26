@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Check, ArrowRight, Shield, Zap, Star, Loader2, Building2, CreditCard, User as UserIcon, Lock, Globe, Mail } from 'lucide-react';
+import { Check, ArrowRight, Shield, Zap, Star, Loader2, Building2, CreditCard, User as UserIcon, Lock, Globe, Mail, ShieldCheck } from 'lucide-react';
 import { cn } from '@/src/utils/cn';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/src/services/firebase';
@@ -33,6 +33,7 @@ export default function SignupPage() {
     cardNumber: '',
     cardExpiry: '',
     cardCvc: '',
+    cpfCnpj: '',
   });
 
   useEffect(() => {
@@ -101,6 +102,7 @@ export default function SignupPage() {
         category: formData.category as any,
         ownerId: firebaseUser.uid,
         planId: selectedPlan?.id || 'essencial',
+        cpfCnpj: formData.cpfCnpj,
         subscription: {
           status: hasTrial ? 'trialing' : 'past_due',
           trialEndsAt,
@@ -344,6 +346,13 @@ export default function SignupPage() {
                     placeholder="Como está no cartão"
                     value={formData.cardName}
                     onChange={v => setFormData({...formData, cardName: v})}
+                  />
+                  <Input 
+                    label="CPF ou CNPJ"
+                    icon={ShieldCheck}
+                    placeholder="000.000.000-00"
+                    value={formData.cpfCnpj}
+                    onChange={v => setFormData({...formData, cpfCnpj: v})}
                   />
                   <Input 
                     label="Número do Cartão"

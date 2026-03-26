@@ -4,6 +4,7 @@ import { X, CreditCard, QrCode, Shield, Check, Loader2, Copy, ArrowRight, AlertC
 import { cn } from '@/src/utils/cn';
 import { toast } from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
+import { updateEmpresa } from '@/src/services/db';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface PaymentModalProps {
     cpfCnpj: string;
     phone?: string;
   };
+  empresaId?: string;
   split?: {
     walletId: string;
     fixedValue?: number;
@@ -38,6 +40,7 @@ export default function PaymentModal({
   description,
   externalReference,
   customerData,
+  empresaId,
   split,
   onSuccess,
   acceptedPaymentMethods = { pix: true, creditCard: true, onSite: true },
@@ -47,6 +50,7 @@ export default function PaymentModal({
     acceptedPaymentMethods.pix ? 'PIX' : (acceptedPaymentMethods.creditCard ? 'CREDIT_CARD' : 'ON_SITE')
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cpfCnpj, setCpfCnpj] = useState(customerData.cpfCnpj || '');
   const [pixData, setPixData] = useState<{ payload: string; encodedImage: string } | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [status, setStatus] = useState<'PENDING' | 'CONFIRMED' | 'ERROR'>('PENDING');
@@ -86,11 +90,23 @@ export default function PaymentModal({
   const handleGeneratePix = async () => {
     setIsProcessing(true);
     try {
+      if (!cpfCnpj) {
+        throw new Error('Por favor, informe seu CPF ou CNPJ');
+      }
+
+      // Update empresa if needed
+      if (empresaId && cpfCnpj !== customerData.cpfCnpj) {
+        await updateEmpresa(empresaId, { cpfCnpj });
+      }
+
       // 1. Create or get customer
       const customerResponse = await fetch('/api/asaas/customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customerData),
+        body: JSON.stringify({
+          ...customerData,
+          cpfCnpj
+        }),
       });
       
       const customerDataResponse = await customerResponse.json();
@@ -144,11 +160,23 @@ export default function PaymentModal({
     e.preventDefault();
     setIsProcessing(true);
     try {
+      if (!cpfCnpj) {
+        throw new Error('Por favor, informe seu CPF ou CNPJ');
+      }
+
+      // Update empresa if needed
+      if (empresaId && cpfCnpj !== customerData.cpfCnpj) {
+        await updateEmpresa(empresaId, { cpfCnpj });
+      }
+
       // 1. Create or get customer
       const customerResponse = await fetch('/api/asaas/customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customerData),
+        body: JSON.stringify({
+          ...customerData,
+          cpfCnpj
+        }),
       });
       
       const customerDataResponse = await customerResponse.json();
@@ -180,7 +208,7 @@ export default function PaymentModal({
           creditCardHolderInfo: {
             name: customerData.name,
             email: customerData.email,
-            cpfCnpj: customerData.cpfCnpj,
+            cpfCnpj: cpfCnpj,
             postalCode: '00000000', // Should be collected in real app
             addressNumber: '0',
             phone: customerData.phone || ''
@@ -343,6 +371,17 @@ export default function PaymentModal({
                     <form onSubmit={handleCreditCardPayment} className="space-y-4">
                       <div className="space-y-4">
                         <div>
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 block">CPF ou CNPJ</label>
+                          <input
+                            required
+                            type="text"
+                            value={cpfCnpj}
+                            onChange={e => setCpfCnpj(e.target.value)}
+                            className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                            placeholder="000.000.000-00"
+                          />
+                        </div>
+                        <div>
                           <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 block">Nome no Cartão</label>
                           <input
                             required
@@ -432,6 +471,19 @@ export default function PaymentModal({
                             <p className="text-zinc-400 text-xs font-black uppercase tracking-widest mb-2">Total a pagar</p>
                             <h2 className="text-4xl font-black text-zinc-900">R$ {value.toFixed(2)}</h2>
                           </div>
+
+                          <div className="mb-6 text-left">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 block">CPF ou CNPJ para o Recibo</label>
+                            <input
+                              required
+                              type="text"
+                              value={cpfCnpj}
+                              onChange={e => setCpfCnpj(e.target.value)}
+                              className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                              placeholder="000.000.000-00"
+                            />
+                          </div>
+
                           <button
                             onClick={handleGeneratePix}
                             disabled={isProcessing}
