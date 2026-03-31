@@ -8,9 +8,10 @@ import firebaseConfig from '../../firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore with memory cache to avoid IndexedDB restrictions in iframes
+// Use the named database ID from the configuration
 export const db = initializeFirestore(app, {
   localCache: memoryLocalCache()
-});
+}, (firebaseConfig as any).firestoreDatabaseId);
 
 export const auth = getAuth(app);
 console.log("Firebase Auth initialized");

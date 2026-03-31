@@ -1,7 +1,10 @@
 {
+  "projectId": "irisagenda-b6e66",
+  "appId": "1:93194618911:web:338e3274d396aef90b6d2a",
   "apiKey": "AIzaSyBpnKkcq_g2CYBaCEq2cFujKcElHtdkxXc",
   "authDomain": "irisagenda-b6e66.firebaseapp.com",
-  "projectId": "irisagenda-b6e66",
-  "appId": "1:93194618911:web:47980aa43241bfa00b6d2a",
-  "firestoreDatabaseId": "(default)"
+  "firestoreDatabaseId": "ai-studio-9502f7a3-2c5f-438a-a717-1c7a1b026158",
+  "storageBucket": "irisagenda-b6e66.firebasestorage.app",
+  "messagingSenderId": "93194618911",
+  "measurementId": ""
 }
