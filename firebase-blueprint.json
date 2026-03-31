@@ -115,9 +115,21 @@
         "createdAt": { "type": "number" }
       },
       "required": ["id", "empresaId", "triggerServiceIds", "addonServiceId", "title", "isActive", "createdAt"]
+    },
+    "PlatformSettings": {
+      "title": "PlatformSettings",
+      "description": "Global platform configuration",
+      "type": "object",
+      "properties": {
+        "platformName": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "faviconUrl": { "type": "string" }
+      },
+      "required": ["platformName"]
     }
   },
   "firestore": {
+    "/platform/settings": { "schema": "PlatformSettings", "description": "Global settings" },
     "/users/{userId}": { "schema": "User", "description": "User profiles" },
     "/empresas/{empresaId}": { "schema": "Empresa", "description": "Company profiles" },
     "/servicos/{servicoId}": { "schema": "Servico", "description": "Services" },

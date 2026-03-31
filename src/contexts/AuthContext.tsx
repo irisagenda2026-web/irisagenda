@@ -3,6 +3,7 @@ import { auth, db } from '../services/firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { User, UserRole, Profissional, Empresa } from '../types/firebase';
+import { handleFirestoreError, OperationType } from '../services/db';
 
 interface AuthContextType {
   user: User | null;
@@ -95,6 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (error: any) {
           console.error("Firestore Error in AuthContext:", error);
+          const path = `users/${firebaseUser.uid}`;
+          
+          try {
+            handleFirestoreError(error, OperationType.GET, path);
+          } catch (e) {
+            // Error is already logged by handleFirestoreError
+          }
+
           if (error.code === 'permission-denied') {
              setFirestoreError("Acesso Negado. O banco de dados não permite leitura. Verifique as Regras de Segurança no Firebase Console.");
           } else if (error.message && error.message.includes("offline")) {

@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "irisagenda2026@gmail.com" ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    // Test Connection
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Platform Settings - Publicly readable
+    match /platform/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if true; // Temporarily permissive to debug "Access Denied" on login
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Empresas
+    match /empresas/{empresaId} {
+      allow read: if true; // Mini-sites are public
+      allow write: if isAuthenticated() && (resource == null || resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    // Servicos
+    match /servicos/{servicoId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Agendamentos
+    match /agendamentos/{agendamentoId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated();
+    }
+
+    // Reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // Coupons
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Upsells
+    match /upsells/{upsellId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Plans
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Business Hours
+    match /businessHours/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Availability Overrides
+    match /availabilityOverrides/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Profissionais
+    match /profissionais/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Bloqueios
+    match /bloqueios/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+  }
+}

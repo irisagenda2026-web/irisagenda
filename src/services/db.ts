@@ -12,9 +12,10 @@ import {
   serverTimestamp,
   Timestamp,
   runTransaction,
-  deleteDoc
+  deleteDoc,
+  getDocFromServer
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { 
   Empresa, 
   Servico, 
@@ -30,11 +31,87 @@ import {
   Plan
 } from '../types/firebase';
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// Validate Connection to Firestore
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration. ");
+    }
+  }
+}
+testConnection();
+
 // Platform Settings
 export const getPlatformSettings = async () => {
-  const docRef = doc(db, 'platform', 'settings');
-  const docSnap = await getDoc(docRef);
-  return docSnap.exists() ? (docSnap.data() as PlatformSettings) : null;
+  const path = 'platform/settings';
+  try {
+    const docRef = doc(db, 'platform', 'settings');
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? (docSnap.data() as PlatformSettings) : null;
+  } catch (error: any) {
+    // Log the error but don't throw if it's a permission error during initial load
+    // This allows the app to use default settings instead of crashing
+    console.warn("Could not load platform settings from Firestore, using defaults.", error.message);
+    try {
+      handleFirestoreError(error, OperationType.GET, path);
+    } catch (e) {
+      // We log it but don't re-throw here because we want the fallback
+    }
+    return null;
+  }
 };
 
 export const updatePlatformSettings = async (data: Partial<PlatformSettings>) => {

@@ -3,16 +3,7 @@ import { initializeFirestore, memoryLocalCache } from 'firebase/firestore';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBpnKkcq_g2CYBaCEq2cFujKcElHtdkxXc",
-  authDomain: "irisagenda-b6e66.firebaseapp.com",
-  projectId: "irisagenda-b6e66",
-  storageBucket: "irisagenda-b6e66.firebasestorage.app",
-  messagingSenderId: "93194618911",
-  appId: "1:93194618911:web:47980aa43241bfa00b6d2a",
-  measurementId: "G-RZJYD594L9"
-};
+import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 
